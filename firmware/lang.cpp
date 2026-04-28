@@ -55,7 +55,7 @@ const char* const STRINGS[STR_COUNT][2] = {
   // Mainscreen Buttons
   { "Gewicht updaten",        "Update Weight"     },  // STR_BTN_WEIGHT
   { "Heute getrocknet",       "Dried today"       },  // STR_BTN_DRIED
-  { "Verknuepfen",            "Link"              },  // STR_BTN_LINK
+  { "Spule verknuepfen",      "Link Spool"        },  // STR_BTN_LINK
 
   // Welcome Screen
   { "Willkommen! Bitte WiFi einrichten.",
@@ -155,7 +155,7 @@ const char* const STRINGS[STR_COUNT][2] = {
   // OTA
   { "Firmware Update",        "Firmware Update"    },  // STR_OTA_TITLE
   { "Upload via Webbrowser",  "Upload via web browser" },  // STR_OTA_BROWSER
-  { ".bin Datei vom PC hochladen", "Upload .bin file from PC" },  // STR_OTA_BROWSER_SUB
+  { ".bin vom PC + SD-Logging",    "Upload from PC + SD logging" },  // STR_OTA_BROWSER_SUB
   { "Update via GitHub",      "Update via GitHub"  },  // STR_OTA_GITHUB
   { "Direkt-Update aus GitHub Releases", "Direct update from GitHub Releases" },  // STR_OTA_GITHUB_SUB
   { "Browser Update",         "Browser Update"     },  // STR_OTA_BROWSER_TITLE
@@ -239,7 +239,7 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Keine Materialien gefunden.", "No materials found." },  // STR_NO_MATERIALS
   { "Keine passenden Spulen.",  "No matching spools." },  // STR_NO_SPOOLS
   { "Verknuepfen?",             "Link this spool?"    },  // STR_CONFIRM_LINK
-  { LV_SYMBOL_OK "  Verknuepft!", LV_SYMBOL_OK "  Linked!" },  // STR_LINK_OK
+  { LV_SYMBOL_OK "  Verknuepfen", LV_SYMBOL_OK "  Link"      },  // STR_LINK_OK
   { "Fehler beim Verknuepfen",  "Error linking"       },  // STR_LINK_FAIL
 
   // Tare
@@ -449,6 +449,17 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Alle Einstellungen werden geloescht:\nWiFi, Spoolman IP, Kalibrierung,\nSprache und alle anderen Daten.\nDanach startet das Geraet neu.",
     "All settings will be erased:\nWiFi, Spoolman IP, calibration,\nlanguage and all other data.\nThe device will restart afterwards." },  // STR_FACTORY_RESET_MSG
   { "Ja, alles loeschen",       "Yes, erase everything"      },  // STR_FACTORY_RESET_CONFIRM
+  { "Spule kopieren",            "Copy spool"                 },  // STR_BTN_COPY_SPOOL
+  { "Spule kopieren",            "Copy spool"                 },  // STR_COPY_TITLE
+  { "Spoolman-ID eingeben",      "Enter Spoolman ID"          },  // STR_COPY_ID_BTN
+  { "Aktive Spulen",             "Active spools"              },  // STR_COPY_ACTIVE_BTN
+  { "Archivierte Spulen",        "Archived spools"            },  // STR_COPY_ARCHIVED_BTN
+  { "Neue Spule anlegen?",       "Create new spool?"          },  // STR_COPY_CONFIRM_TITLE
+  { "Vorlage: %s\nZuletzt bekannt: %.0f g\nWaagengewicht (netto): %.0f g\n-> wird uebernommen", "Template: %s\nLast known: %.0f g\nNew spool weight (net): %.0f g\n-> will be saved" },  // STR_COPY_CONFIRM_MSG
+  { "Spule erstellt!",           "Spool created!"             },  // STR_COPY_OK
+  { "Fehler beim Erstellen",     "Error creating spool"       },  // STR_COPY_FAIL
+  { "Keine Spulen gefunden",     "No spools found"            },  // STR_COPY_NO_SPOOLS
+  { "Zu viele Ergebnisse.\nBitte ID verwenden.", "Too many results.\nPlease use ID instead." },  // STR_COPY_LIMIT_HIT
   { "Setup ueberspringen",      "Skip setup"                 },  // STR_BTN_SKIP_SETUP
   { "Unlink",                   "Unlink"                     },  // STR_UNLINK_BTN
   { "Spule unlinken?",          "Unlink spool?"              },  // STR_UNLINK_TITLE
@@ -458,4 +469,6 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Waage initialisiert...",   "Scale calibrating..."       },  // STR_SCALE_CALIBRATING
   { "Verbinde mit WiFi...",     "Connecting to WiFi..."      },  // STR_WIFI_CONNECTING_BOOT
   { "Waage und WiFi werden gestartet...", "Starting up, please wait..." },  // STR_BOOTING
+  { "Neustart",                 "Reboot"                     },  // STR_BTN_REBOOT
+  { "Geraet neu starten",       "Restart device"             },  // STR_BTN_REBOOT_SUB
 };
