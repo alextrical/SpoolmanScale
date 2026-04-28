@@ -2,19 +2,25 @@
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="images/logo_1.jpeg">
   <source media="(prefers-color-scheme: dark)" srcset="images/logo_2.jpeg">
-  <img src="images/logo_2.jpeg" width="400">
+  <img src="images/logo_2.jpeg" width="300">
 </picture>
 </div>
 
 # SpoolmanScale
 
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/GzQzGa5pBG)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/formfollowsfunction)
+
 > 🚀 **Public Beta** – This is beta software, provided as-is. Expect bugs, rough edges, and missing documentation. Use at your own risk.
 
 **SpoolmanScale** is an open-source ESP32-based filament scale with NFC reader, integrating directly with [Spoolman](https://github.com/Donkie/Spoolman).
 
+Yes, another filament scale – but hear me out, this one might actually earn a spot next to your printer. 😄
+
 Place a spool on the scale – it reads the NFC tag, pulls the spool data from Spoolman, and lets you update the remaining weight, log a drying date, or archive empty spools. All from a 3.5" touchscreen. No phone needed.
 
 > A running [Spoolman](https://github.com/Donkie/Spoolman) instance on your local network is required – this is what stores all your spool data.
+
 
 ---
 
@@ -27,11 +33,15 @@ Place a spool on the scale – it reads the NFC tag, pulls the spool data from S
 Currently tested with a Spoolman library of 150+ active spools and running stable. If you have an even larger collection – I'd love to hear how it holds up!
 
 ---
-
+<div align="center">
 <img src="images/SpoolmanScale_3.jpeg" width="400"> <img src="images/SpoolmanScale_4.jpeg" width="400">
 
-[![SpoolmanScale Demo](https://img.youtube.com/vi/D8xdF68sX_A/maxresdefault.jpg)](https://youtube.com/shorts/D8xdF68sX_A)
+<img src="images/SpoolmanScale_5.jpeg" width="300"> <img src="images/SpoolmanScale_6.jpeg" width="300"> <img src="images/SpoolmanScale_7.jpeg" width="300">
+<img src="images/SpoolmanScale_8.jpeg" width="300"> <img src="images/SpoolmanScale_9.jpeg" width="300"> <img src="images/SpoolmanScale_10.jpeg" width="300">
+<img src="images/SpoolmanScale_11.jpeg" width="300"><img src="images/SpoolmanScale_12.jpeg" width="300"> 
 
+[![SpoolmanScale Demo](https://img.youtube.com/vi/D8xdF68sX_A/maxresdefault.jpg)](https://youtube.com/shorts/D8xdF68sX_A)
+</div>
 ---
 
 ## Features
@@ -82,11 +92,12 @@ The printable enclosure files are available on MakerWorld:
 
 ## Roadmap
 
-**V0.6.0 (ideas & community requests)**
+**V0.6.0+ (ideas & community requests)**
 
 * Drying reminder – notify when filament hasn't been dried in a while (configurable per material or manual threshold)
 * Fix: occasional crashes during first-time setup and while navigating the settings menus
 * Fix: crash on invalid Spoolman IP
+* Filaman compatibility – integration with [Filaman](https://github.com/Fire-Devils/filaman-system)) is being explored, so spools tagged with Filaman could be recognized by SpoolmanScale and vice versa. Early-stage investigation – no promises on timing yet
 * More ideas welcome – feel free to open an issue or join the Discord!
 
 ---
@@ -201,13 +212,13 @@ Connect the four wires of the YZC-133 load cell to the NAU7802 screw terminals:
 The USB-C panel mount extension needs to be trimmed before installation. Using a utility knife, carefully shorten the connector housing little by little until it no longer protrudes beyond the edge of the display. Take your time – small cuts at a time. Once flush, it will fit cleanly into the enclosure.
 
 ### Pictures
-
+<div align="center">
 <img src="images/spoolmanscale_assembly_1.jpeg" width="400"> <img src="images/spoolmanscale_assembly_2.jpeg" width="400">
 <img src="images/spoolmanscale_assembly_3.jpeg" width="400"> <img src="images/spoolmanscale_assembly_4.jpeg" width="400">
 <img src="images/spoolmanscale_assembly_5.jpeg" width="400"> <img src="images/spoolmanscale_assembly_6.jpeg" width="400">
 <img src="images/spoolmanscale_assembly_7.jpeg" width="400"> <img src="images/spoolmanscale_assembly_8.jpeg" width="400">
 <img src="images/spoolmanscale_assembly_9.jpeg" width="400">
-
+</div>
 ---
 
 ## Known Issues
@@ -242,10 +253,7 @@ OpenSpoolMan connects to your Bambu printer via MQTT and reads which filament is
 
 ---
 
-💬 **Community & Support:** [Join Discord](https://discord.gg/GzQzGa5pBG)
-
 *Not affiliated with Spoolman. Uses the Spoolman REST API.*
 
-*Full wiring diagrams, BOM, and build guide will be published with the first public beta.*
+*Full wiring diagrams and build guide will be published at a later date.*
 
-💛 **If you find this project useful: You can buy me a coffee** [ko-fi.com/formfollowsfunction](https://ko-fi.com/formfollowsfunction)
