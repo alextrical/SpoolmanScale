@@ -20,7 +20,7 @@ Place a spool on the scale – it reads the NFC tag, pulls the spool data from S
 
 ## Status
 
-🎉 **Public Beta is live!** Firmware **v0.5.3-beta** is released and available via the [Web Flasher](https://niko11111.github.io/SpoolmanScale) or as a direct download from [Releases](https://github.com/Niko11111/SpoolmanScale/releases).
+🎉 **Public Beta is live!** Firmware **v0.5.5-beta** is released and available via the [Web Flasher](https://niko11111.github.io/SpoolmanScale) or as a direct download from [Releases](https://github.com/Niko11111/SpoolmanScale/releases).
 
 > **Please note:** This is a beta release. A more detailed guide is in the works, but this README already covers all the essential steps to get your SpoolmanScale up and running. If you run into issues, join the [Discord](https://discord.gg/GzQzGa5pBG) – happy to help.
 
@@ -36,18 +36,20 @@ Currently tested with a Spoolman library of 150+ active spools and running stabl
 
 ## Features
 
-* 🏷️ **Bambu Lab NFC tags** – automatic read & KDF decryption, material/color/vendor shown instantly
-* 🔗 **Third-party spool linking** – place any NTAG sticker → select spool from on-screen list → linked in Spoolman via `extra.tag`
+* 🏷️ **Bambu Lab NFC tags** – place a spool on the scale and SpoolmanScale reads it instantly: material, color, vendor, remaining weight and drying history appear automatically. No tapping required
+* 🔗 **Bambu Lab spool linking** – first time using a spool? SpoolmanScale finds the matching entry in Spoolman automatically by filtering unlinked spools by material type, subtype (e.g. HF, CF, Matte) and color similarity — so you only see spools that actually match your tag
+* 🔗 **Third-party spool linking** – place any NTAG sticker → select vendor and material → pick from a filtered list → linked in Spoolman via `extra.tag`
+* 📋 **Copy spool** – running low? Place a new spool on the scale, tap Copy spool, and SpoolmanScale creates an identical entry in Spoolman, tags the NFC chip, and logs the current weight — all in one step
 * ⚖️ **Live weight (NAU7802)** – moving average filter, TARE, live diff vs. Spoolman remaining weight
 * 📡 **Spoolman REST API** – update remaining weight, set initial weight, set spool weight (per spool / filament / vendor), log drying date, archive spools
 * 📱 **Touchscreen UI (LVGL 8.3, 480×320)** – settings menu, confirmation popups, sleep/wake, no-tag timer
 * ⚙️ **On-device Wi-Fi setup** – scan networks, enter credentials and Spoolman IP directly on the touchscreen
-* 🔄 **Automatic firmware updates (OTA)**
-SpoolmanScale checks for new firmware releases on GitHub automatically. If an update is available, you'll see a notification on the device and can install it with a single tap, or upload it via browser – no IDE, no cables, no computer needed.
+* 🔄 **Firmware updates (OTA)** – update via browser upload or check for new releases directly from the settings menu. No IDE, no cables, no computer needed
 * ⚡ **Web Flasher** – first-time flash via browser over USB, no IDE needed: [niko11111.github.io/SpoolmanScale](https://niko11111.github.io/SpoolmanScale)
 * 🌍 **DE / EN language support** – language selection on first boot, switchable in settings
 * 🌙 **Power management** – display dimming, deep sleep, wake via touch
-* 🪵 **SD card logging** – Insert a microSD card and SpoolmanScale logs all events automatically. Download logs via browser – no disassembly needed. Useful for diagnosing issues and tracking device behavior during beta phase.
+* 🪵 **SD card logging** – insert a microSD card and SpoolmanScale logs all events automatically. Download logs via browser – no disassembly needed. Useful for diagnosing issues and tracking device behavior during beta phase
+ 
 
 ---
 
