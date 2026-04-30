@@ -32,7 +32,7 @@ Place a spool on the scale – it reads the NFC tag, pulls the spool data from S
 
 > **Please note:** This is a beta release. A more detailed guide is in the works, but this README already covers all the essential steps to get your SpoolmanScale up and running. If you run into issues, join the [Discord](https://discord.gg/GzQzGa5pBG) – happy to help.
 
-Currently tested with a Spoolman library of 150+ active spools and running stable. If you have an even larger collection – I'd love to hear how it holds up!
+Currently tested with a Spoolman library of 260+ active spools and running stable. If you have an even larger collection – I'd love to hear how it holds up!
 
 ---
 <div align="center">
