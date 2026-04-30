@@ -386,6 +386,14 @@ enum StringID {
   STR_BTN_REBOOT,
   STR_BTN_REBOOT_SUB,
 
+  // Whole gram toggle
+  STR_WHOLE_GRAM,
+
+  // List limit info items
+  STR_LIST_MORE_SPOOLS,
+  STR_LIST_MORE_VENDORS,
+  STR_LIST_MORE_MATS,
+
   STR_COUNT
 };
 

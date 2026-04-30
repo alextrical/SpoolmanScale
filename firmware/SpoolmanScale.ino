@@ -1,7 +1,7 @@
 // ============================================================
 //  SpoolmanScale – Bambu NFC Tag Reader & Decoder
 //  Board:   WT32-SC01 Plus (ESP32-S3)
-//  Version: v0.5.5-beta
+//  Version: v0.5.6-beta
 //
 //  Reads Bambu Lab MIFARE Classic tags, derives keys via KDF
 //  (HKDF/SHA256, master key from Bambu-Research-Group/RFID-Tag-Guide),
@@ -92,11 +92,12 @@ void closeIdInputPopup();
 void linkIdLookupAndPatch(int entered_id, bool is_bambu);
 void showWarnPopupA(int spool_id, const char* existing_tag, bool is_bambu, const char* link_uuid);
 void showWarnPopupB(int spool_id, bool is_bambu);
-void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter);
+void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter, bool archived_only = false);
 void doLinkPatch(int spool_id, bool is_bambu);
 void showVendorList();
 void showMaterialList(const char* vendor_name);
-void showFilteredSpoolList(const char* vendor_name, const char* material_prefix);
+void showMaterialSubList(const char* vendor_name, const char* material_prefix);
+void showFilteredSpoolList(const char* vendor_name, const char* material_prefix, const char* material_full);
 bool writeSpoolScaleTag(int spool_id, const char* uuid_hex);
 bool readSpoolScaleTag(int* out_spool_id, char* out_uuid, size_t uuid_len);
 void generateUUID(char* out, size_t len);
@@ -183,7 +184,7 @@ static int     bright_normal   = BRIGHT_NORMAL_DEFAULT;
 static int     dim_timeout_ms  = DIM_TIMEOUT_DEFAULT;
 static int     sleep_timeout_ms = SLEEP_TIMEOUT_DEFAULT;
 #define TOUCH_INT_PIN       7   // FT6336U INT fuer Wake-Up
-#define FW_VERSION  "v0.5.5-beta"
+#define FW_VERSION  "v0.5.6-beta"
 #define DONATION_URL "ko-fi.com/formfollowsfunction"
 
 // NAU7802 calibration
@@ -250,6 +251,12 @@ static bool skip_setup_pending = false;  // deferred from skip button callback
 static bool cal_reminder_pending = false;            // deferred showCalReminderScreen from callback
 static bool show_bag_pending    = false;             // deferred showBagScreen from scale_sub callback
 static bool show_factor_pending = false;             // deferred showFactorScreen from scale_sub callback
+static bool show_lastused_pending = false;           // deferred buildLastUsedScreen from scale_sub callback
+static bool show_spoolman_pending = false;           // deferred buildSpoolmanScreen from connection callback
+static bool show_connection_from_spoolman_pending = false;  // deferred return-to-connection from spoolman back btn
+static bool show_system_pending = false;             // deferred return-to-system from ota/info back btn
+static bool show_ota_pending    = false;             // deferred showOtaScreen from system tile callback
+static bool show_info_pending   = false;             // deferred showInfoScreen from system tile callback
 static bool lang_selected_no_reboot = false;         // EN selected on welcome screen — go to firstboot without reboot
 static uint8_t last_used_mode = 0;                   // 0=OpenSpoolMan, 1=Last Weighed
 Preferences prefs;
@@ -446,6 +453,9 @@ static float scale_filter_buf[SCALE_FILTER_SIZE] = {0};
 static int   scale_filter_idx = 0;
 static bool  scale_filter_full = false;
 
+// Display precision: true = whole grams only, false = 0.1g
+static bool g_whole_gram = false;
+
 // Bag weight (configurable in settings)
 static float bag_weight_g = 50.0f;  // Standard: 50g (Vakuumbeutel + Silikagel)
 
@@ -488,6 +498,7 @@ static lv_obj_t *scr_link_warn_a  = nullptr;  // Warning popup A (already linked
 static lv_obj_t *scr_link_warn_b  = nullptr;  // Warning popup B (material mismatch)
 static lv_obj_t *scr_link_vendor  = nullptr;  // Vendor-Auswahl (Flow B Pfad 2)
 static lv_obj_t *scr_link_mat     = nullptr;  // Material selection (flow B path 2)
+static lv_obj_t *scr_link_mat_sub = nullptr;  // Material sub-name selection (Stufe 3)
 static lv_obj_t *scr_link_spools  = nullptr;  // Spool list (all path 2)
 
 // State for ID input
@@ -498,6 +509,8 @@ static lv_obj_t *lbl_link_id_status  = nullptr; // Error label in numeric keypad
 // State for path-2 navigation
 static char link_selected_vendor[32]   = "";   // selected vendor
 static char link_selected_material[8]  = "";   // 3-char material prefix
+static char link_selected_material_full[32] = ""; // full material name (Stufe 3)
+static bool link_stage3_shown = false;          // true if stage 3 actually rendered (not auto-skipped)
 static bool link_flow_is_bambu = false;         // which flow is active
 
 // Copy spool flow state
@@ -918,6 +931,14 @@ void btn_dried_cb(lv_event_t *e) {
 // ============================================================
 //  PREFERENCES (NVS)
 // ============================================================
+
+// Helper: format a weight value according to g_whole_gram setting
+static inline void fmtG(char* buf, size_t len, float val) {
+  if (val > -0.5f && val < 0.5f) val = 0.0f;  // prevent "-0 g"
+  if (g_whole_gram) snprintf(buf, len, "%.0f g", val);
+  else              snprintf(buf, len, "%.1f g", val);
+}
+
 void loadPrefs() {
   prefs.begin("spoolscale", false);
   String ssid = prefs.getString("wifi_ssid", cfg_wifi_ssid);
@@ -945,6 +966,7 @@ void loadPrefs() {
   cfg_lang_set =     prefs.getBool("lang_set",  false);
   cfg_first_boot =   prefs.getBool("first_boot", true);
   last_used_mode =   prefs.getUChar("lu_mode",  0);  // 0=OpenSpoolMan, 1=Last Weighed
+  g_whole_gram   =   prefs.getBool("whole_gram", false);
   prefs.end();
   Serial.printf("Prefs: SSID=%s Spoolman=%s\n", cfg_wifi_ssid, cfg_spoolman_base);
   Serial.printf("Scale: cal_factor=%.4f  zero_offset=%d  bag_weight=%.1fg\n",
@@ -2314,10 +2336,8 @@ void buildWifiConnectingScreen() {
   lv_obj_set_style_shadow_width(btn_next, 0, 0);
   lv_obj_set_style_border_width(btn_next, 0, 0);
   lv_obj_add_event_cb(btn_next, [](lv_event_t *e) {
-    hideAllOverlays();
-    if (scr_spoolman) { lv_obj_del(scr_spoolman); scr_spoolman = nullptr; }
-    buildSpoolmanScreen();
-    lv_obj_clear_flag(scr_spoolman, LV_OBJ_FLAG_HIDDEN);
+    logSD("BTN: WifiConnecting -> Next (Spoolman)");
+    show_spoolman_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_next = lv_label_create(btn_next);
   lv_label_set_text(lbl_next, "Spoolman  " LV_SYMBOL_RIGHT);
@@ -2403,10 +2423,9 @@ void buildSpoolmanScreen() {
   // Header
   buildSubHeader(scr_spoolman, T(STR_SPOOLMAN_TITLE),
     [](lv_event_t *e){
+      logSD("BTN: Spoolman -> Back");
       if (sp_ip_input[0]) saveSpoolmanIP(sp_ip_input);
-      if (scr_connection) { lv_obj_del(scr_connection); scr_connection = nullptr; }
-      buildConnectionScreen();
-      if (!scr_connection) buildConnectionScreen(); hideAllOverlays(); lv_obj_clear_flag(scr_connection, LV_OBJ_FLAG_HIDDEN);
+      show_connection_from_spoolman_pending = true;
     });
 
   // Hint: port info, font10, y=54 (between subheader and input)
@@ -2674,11 +2693,9 @@ void showSpoolmanFailScreen(bool is_setup_flow) {
 
   // Back → Spoolman IP
   addBackButton(scr_spoolman_fail, [](lv_event_t *e){
-    if (scr_spoolman_fail) { lv_obj_del(scr_spoolman_fail); scr_spoolman_fail = nullptr; }
-    hideAllOverlays();
-    if (scr_spoolman) { lv_obj_del(scr_spoolman); scr_spoolman = nullptr; }
-    buildSpoolmanScreen();
-    lv_obj_clear_flag(scr_spoolman, LV_OBJ_FLAG_HIDDEN);
+    logSD("BTN: SpoolmanFail -> Back");
+    show_spoolman_pending = true;
+    // pending handler will delete scr_spoolman_fail via hideAllOverlays + recreate spoolman
   });
   addCloseButton(scr_spoolman_fail);
 
@@ -2721,11 +2738,8 @@ void showSpoolmanFailScreen(bool is_setup_flow) {
   lv_obj_set_style_shadow_width(btn_retry, 0, 0);
   lv_obj_set_style_border_width(btn_retry, 0, 0);
   lv_obj_add_event_cb(btn_retry, [](lv_event_t *e){
-    if (scr_spoolman_fail) { lv_obj_del(scr_spoolman_fail); scr_spoolman_fail = nullptr; }
-    hideAllOverlays();
-    if (scr_spoolman) { lv_obj_del(scr_spoolman); scr_spoolman = nullptr; }
-    buildSpoolmanScreen();
-    lv_obj_clear_flag(scr_spoolman, LV_OBJ_FLAG_HIDDEN);
+    logSD("BTN: SpoolmanFail -> Retry");
+    show_spoolman_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_r = lv_label_create(btn_retry);
   lv_label_set_text(lbl_r, buf_retry);
@@ -2879,6 +2893,42 @@ void buildFactorScreen() {
   const int NP_START_Y = 132;
 
   const char* np_labels_f[] = { "1","2","3","4","5","6","7","8","9",".","0","T" };
+
+  // ── Whole-gram toggle (left of numpad, 68x68px) ──
+  // NP_PAD_X = 80px — 68px toggle fits with 6px margin
+  {
+    lv_obj_t *btn_wg = lv_btn_create(scr_factor);
+    lv_obj_set_size(btn_wg, 68, 68);
+    int wg_y = NP_START_Y + (4*(NP_H+NP_GAP) - 68) / 2;  // vertically centred in numpad area
+    lv_obj_set_pos(btn_wg, 6, wg_y);
+    lv_obj_set_style_radius(btn_wg, 8, 0);
+    lv_obj_set_style_shadow_width(btn_wg, 0, 0);
+    lv_obj_set_style_border_width(btn_wg, 1, 0);
+    lv_obj_set_style_bg_color(btn_wg, g_whole_gram ? lv_color_hex(0x1a3020) : lv_color_hex(0x0a1828), 0);
+    lv_obj_set_style_border_color(btn_wg, g_whole_gram ? lv_color_hex(0x28d49a) : lv_color_hex(0x1a2840), 0);
+    lv_obj_set_style_bg_color(btn_wg, lv_color_hex(0x2a5030), LV_STATE_PRESSED);
+
+    lv_obj_t *lbl_wg = lv_label_create(btn_wg);
+    lv_label_set_text(lbl_wg, T(STR_WHOLE_GRAM));
+    lv_obj_set_style_text_color(lbl_wg, g_whole_gram ? lv_color_hex(0x28d49a) : lv_color_hex(0x4a6fa0), 0);
+    lv_obj_set_style_text_font(lbl_wg, &lv_font_montserrat_12, 0);
+    lv_obj_set_style_text_align(lbl_wg, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_long_mode(lbl_wg, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(lbl_wg, 60);
+    lv_obj_center(lbl_wg);
+
+    lv_obj_add_event_cb(btn_wg, [](lv_event_t *e) {
+      g_whole_gram = !g_whole_gram;
+      prefs.begin("spoolscale", false);
+      prefs.putBool("whole_gram", g_whole_gram);
+      prefs.end();
+      lv_obj_t *b = lv_event_get_target(e);
+      lv_obj_t *l = lv_obj_get_child(b, 0);
+      lv_obj_set_style_bg_color(b, g_whole_gram ? lv_color_hex(0x1a3020) : lv_color_hex(0x0a1828), 0);
+      lv_obj_set_style_border_color(b, g_whole_gram ? lv_color_hex(0x28d49a) : lv_color_hex(0x1a2840), 0);
+      lv_obj_set_style_text_color(l, g_whole_gram ? lv_color_hex(0x28d49a) : lv_color_hex(0x4a6fa0), 0);
+    }, LV_EVENT_CLICKED, NULL);
+  }
 
   for (int i = 0; i < 12; i++) {
     int col = i % 3, row = i / 3;
@@ -3388,9 +3438,8 @@ void buildConnectionScreen() {
     lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 26); }
   lv_obj_add_event_cb(btn_sp, [](lv_event_t *e){
-    if (!scr_spoolman) buildSpoolmanScreen();
-    hideAllOverlays();
-    lv_obj_clear_flag(scr_spoolman, LV_OBJ_FLAG_HIDDEN);
+    logSD("BTN: Conn -> Spoolman IP");
+    show_spoolman_pending = true;
   }, LV_EVENT_CLICKED, NULL);
 
   // ── Spoolman Extra Fields ──
@@ -3421,6 +3470,7 @@ void buildConnectionScreen() {
     lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 26); }
   lv_obj_add_event_cb(btn_ef, [](lv_event_t *e){
+    logSD("BTN: Conn -> Extra Fields");
     showExtraFieldsScreen(false);
   }, LV_EVENT_CLICKED, NULL);
   if (sd_verbose) logSD("[verbose] buildConnectionScreen: done");
@@ -3464,14 +3514,13 @@ void buildLastUsedScreen() {
   lv_obj_set_style_radius(btn_osm, 8, 0);
   lv_obj_set_style_shadow_width(btn_osm, 0, 0);
   lv_obj_add_event_cb(btn_osm, [](lv_event_t *e) {
+    logSD("BTN: LastUsed -> OSM mode");
     last_used_mode = 0;
     Preferences p; p.begin("spoolscale", false);
     p.putUChar("lu_mode", 0); p.end();
     updateLastUsedCapLabel();
-    // Rebuild screen to update button states
-    if (scr_lastused) { lv_obj_del(scr_lastused); scr_lastused = nullptr; }
-    buildLastUsedScreen();
-    lv_obj_clear_flag(scr_lastused, LV_OBJ_FLAG_HIDDEN);
+    // Rebuild via flag pattern — never delete own parent screen in callback
+    show_lastused_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_osm = lv_label_create(btn_osm);
   lv_label_set_text(lbl_osm, T(STR_LASTUSED_OPT_OSM));
@@ -3492,13 +3541,12 @@ void buildLastUsedScreen() {
   lv_obj_set_style_radius(btn_lw, 8, 0);
   lv_obj_set_style_shadow_width(btn_lw, 0, 0);
   lv_obj_add_event_cb(btn_lw, [](lv_event_t *e) {
+    logSD("BTN: LastUsed -> Weighed mode");
     last_used_mode = 1;
     Preferences p; p.begin("spoolscale", false);
     p.putUChar("lu_mode", 1); p.end();
     updateLastUsedCapLabel();
-    if (scr_lastused) { lv_obj_del(scr_lastused); scr_lastused = nullptr; }
-    buildLastUsedScreen();
-    lv_obj_clear_flag(scr_lastused, LV_OBJ_FLAG_HIDDEN);
+    show_lastused_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_lw = lv_label_create(btn_lw);
   lv_label_set_text(lbl_lw, T(STR_LASTUSED_OPT_WEIGHED));
@@ -3627,9 +3675,8 @@ void buildScaleSubScreen() {
     lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 24); }
   lv_obj_add_event_cb(btn_lu, [](lv_event_t *e){
-    if (!scr_lastused) buildLastUsedScreen();
-    hideAllOverlays();
-    lv_obj_clear_flag(scr_lastused, LV_OBJ_FLAG_HIDDEN);
+    logSD("BTN: Scale-Sub -> Last Used Mode");
+    show_lastused_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   if (sd_verbose) logSD("[verbose] buildScaleSubScreen: done");
 }
@@ -4167,9 +4214,8 @@ void buildOtaScreen() {
   scr_ota = buildOverlayScreen();
   buildSubHeader(scr_ota, T(STR_OTA_TITLE),
     [](lv_event_t *e){
-      hideAllOverlays();
-      buildSystemScreen();
-      lv_obj_clear_flag(scr_system, LV_OBJ_FLAG_HIDDEN);
+      logSD("BTN: OTA -> Back");
+      show_system_pending = true;
     });
 
   // Browser upload button
@@ -4273,8 +4319,9 @@ void buildOtaBrowserScreen() {
   scr_ota_browser = buildOverlayScreen();
   buildSubHeader(scr_ota_browser, T(STR_OTA_BROWSER_TITLE),
     [](lv_event_t *e){
+      logSD("BTN: OtaBrowser -> Back");
       stopOtaServer();
-      showOtaScreen();
+      show_ota_pending = true;
     });
 
   if (!wifi_ok) {
@@ -4338,8 +4385,9 @@ void buildOtaBrowserScreen() {
   lv_obj_set_style_shadow_width(btn_stop, 0, 0);
   lv_obj_set_style_border_width(btn_stop, 0, 0);
   lv_obj_add_event_cb(btn_stop, [](lv_event_t *e){
+    logSD("BTN: OtaBrowser -> Stop server");
     stopOtaServer();
-    showOtaScreen();
+    show_ota_pending = true;
   }, LV_EVENT_CLICKED, NULL);
   lv_obj_t *lbl_stop = lv_label_create(btn_stop);
   lv_label_set_text(lbl_stop, T(STR_BTN_STOP_SERVER));
@@ -4650,7 +4698,7 @@ void buildOtaGithubScreen() {
   char buf_title[32];
   strncpy(buf_title, T(STR_GH_OTA_TITLE), sizeof(buf_title)-1); buf_title[sizeof(buf_title)-1]=0;
   buildSubHeader(scr_ota_github, buf_title,
-    [](lv_event_t *e){ showOtaScreen(); });
+    [](lv_event_t *e){ logSD("BTN: OtaGithub -> Back"); show_ota_pending = true; });
 
   // ── "Check for Updates" button ──
   lv_obj_t *btn_check = lv_btn_create(scr_ota_github);
@@ -4815,7 +4863,7 @@ void buildSystemScreen() {
     lv_obj_set_style_text_font(sub, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 22); }
-  lv_obj_add_event_cb(btn_upd, [](lv_event_t *e){ logSD("BTN: -> OTA"); showOtaScreen(); }, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(btn_upd, [](lv_event_t *e){ logSD("BTN: -> OTA"); show_ota_pending = true; }, LV_EVENT_CLICKED, NULL);
 
   // Yellow badge top-right of firmware update button
   // Red circle badge top-right of firmware update button
@@ -4857,7 +4905,7 @@ void buildSystemScreen() {
     lv_obj_set_style_text_font(sub, &lv_font_montserrat_12, 0);
     lv_obj_set_style_text_align(sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(sub, LV_ALIGN_CENTER, 0, 22); }
-  lv_obj_add_event_cb(btn_info, [](lv_event_t *e){ logSD("BTN: System -> Info"); showInfoScreen(); }, LV_EVENT_CLICKED, NULL);
+  lv_obj_add_event_cb(btn_info, [](lv_event_t *e){ logSD("BTN: System -> Info"); show_info_pending = true; }, LV_EVENT_CLICKED, NULL);
 
   // ── Button 4: Factory Reset (half width, left) + Reboot (half width, right) ──
   int reset_y = BTN_Y0 + 3*(BTN_H + BTN_GAP);
@@ -5413,9 +5461,8 @@ void showInfoScreen() {
   lv_obj_set_style_text_font(lbl_bk, &lv_font_montserrat_18, 0);
   lv_obj_center(lbl_bk);
   lv_obj_add_event_cb(btn_back, [](lv_event_t *e){
-    if (scr_info) { lv_obj_del(scr_info); scr_info = nullptr; }
-    if (!scr_system) buildSystemScreen();
-    lv_obj_clear_flag(scr_system, LV_OBJ_FLAG_HIDDEN);
+    logSD("BTN: Info -> Back");
+    show_system_pending = true;
   }, LV_EVENT_CLICKED, NULL);
 
   lv_obj_t *hdr = lv_label_create(scr_info);
@@ -5807,16 +5854,20 @@ static int colorDistance(const char* hex_a, const char* hex_b) {
 //  SPOOLMAN: LOAD ALL SPOOLS (for new link flow)
 //  Loads all active spools including extra.tag status
 // ============================================================
-void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
+void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter, bool archived_only) {
   // Free any previous allocation
   if (link_spools) { heap_caps_free(link_spools); link_spools = nullptr; }
   link_spool_count = 0;
   if (!wifi_ok) return;
 
-  logSDf("link fetch: is_bambu=%d material_filter='%s'", is_bambu, material_filter ? material_filter : "");
+  logSDf("link fetch: is_bambu=%d material_filter='%s' archived_only=%d",
+    is_bambu, material_filter ? material_filter : "", (int)archived_only);
 
   HTTPClient http;
-  http.begin(String(cfg_spoolman_base) + "/api/v1/spool?allow_archived=false");
+  // archived_only=true -> include archived (we filter to keep only archived in pass 1+2)
+  // otherwise include only active spools
+  const char* url_suffix = archived_only ? "/api/v1/spool?allow_archived=true" : "/api/v1/spool?allow_archived=false";
+  http.begin(String(cfg_spoolman_base) + url_suffix);
   http.setTimeout(8000);
   int code = http.GET();
   if (code != 200) { http.end(); return; }
@@ -5828,6 +5879,7 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
   JsonArray filterL_arr = filterL.to<JsonArray>();
   JsonObject fL = filterL_arr.createNestedObject();
   fL["id"] = true;
+  fL["archived"] = true;
   fL["remaining_weight"] = true;
   fL["extra"]["tag"] = true;
   fL["filament"]["id"] = true;
@@ -5848,16 +5900,26 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
 
   // ── Pass 1: count matching spools (pre-filter) ──────────────
   int matched = 0;
+  int skipped_archived = 0;
   for (JsonObject spool : spools) {
     total_in_api++;
 
-    // Skip already-linked spools
+    // Archived filter: copy-archived flow shows ONLY archived; otherwise skip them
+    bool sp_archived = spool["archived"] | false;
+    if (archived_only) {
+      if (!sp_archived) { skipped_archived++; continue; }
+    } else {
+      if (sp_archived) { skipped_archived++; continue; }
+    }
+
+    // Skip already-linked spools — only in normal link flow.
+    // In copy-archived flow, archived spools are templates (typically still tagged) -> don't skip.
     String existing_tag = "";
     if (spool.containsKey("extra") && spool["extra"].containsKey("tag")) {
       existing_tag = spool["extra"]["tag"].as<String>();
       existing_tag.replace("\"",""); existing_tag.trim();
     }
-    if (existing_tag.length() > 0) { skipped_tag++; count_linked++; continue; }
+    if (!archived_only && existing_tag.length() > 0) { skipped_tag++; count_linked++; continue; }
 
     String vname = "";
     if (spool["filament"].containsKey("vendor") && !spool["filament"]["vendor"].isNull())
@@ -5906,10 +5968,10 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
 
   if (matched == 0) return;
 
-  // Apply list limit to avoid LVGL heap exhaustion
-  bool limit_hit = (matched > spool_list_limit);
-  int alloc_count = limit_hit ? spool_list_limit : matched;
-  if (limit_hit) logSDf("link fetch: limit %d applied, showing %d of %d", spool_list_limit, alloc_count, matched);
+  // Store ALL matched spools — the display limit is applied at render time (showFilteredSpoolList)
+  // This allows Vendor and Material lists to see the full dataset
+  int alloc_count = matched;
+  logSDf("link fetch: matched=%d, allocating all for vendor/material dedupe", matched);
 
   // ── Allocate exactly the needed size in PSRAM ───────────────
   link_spools = (UnlinkedSpool*)heap_caps_malloc(alloc_count * sizeof(UnlinkedSpool), MALLOC_CAP_SPIRAM);
@@ -5924,12 +5986,20 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
   for (JsonObject spool : spools) {
     if (link_spool_count >= alloc_count) break;
 
+    // Archived filter: same logic as pass 1
+    bool sp_archived = spool["archived"] | false;
+    if (archived_only) {
+      if (!sp_archived) continue;
+    } else {
+      if (sp_archived) continue;
+    }
+
     String existing_tag = "";
     if (spool.containsKey("extra") && spool["extra"].containsKey("tag")) {
       existing_tag = spool["extra"]["tag"].as<String>();
       existing_tag.replace("\"",""); existing_tag.trim();
     }
-    if (existing_tag.length() > 0) continue;
+    if (!archived_only && existing_tag.length() > 0) continue;
 
     String vname = "";
     if (spool["filament"].containsKey("vendor") && !spool["filament"]["vendor"].isNull())
@@ -6036,6 +6106,7 @@ void doLinkPatch(int spool_id, bool is_bambu) {
   if (scr_link_warn_b) { lv_obj_del(scr_link_warn_b); scr_link_warn_b = nullptr; }
   if (scr_link_vendor) { lv_obj_del(scr_link_vendor); scr_link_vendor = nullptr; }
   if (scr_link_mat)    { lv_obj_del(scr_link_mat);    scr_link_mat    = nullptr; }
+  if (scr_link_mat_sub){ lv_obj_del(scr_link_mat_sub);scr_link_mat_sub= nullptr; }
   if (scr_link_spools) { lv_obj_del(scr_link_spools); scr_link_spools = nullptr; }
   if (scr_link_list)   { lv_obj_del(scr_link_list);   scr_link_list   = nullptr; }
   // Free PSRAM spool list
@@ -6647,8 +6718,33 @@ void closeIdInputPopup() {
 // ============================================================
 //  LINK-FLOW: FLOW B PFAD 2 — SPULEN-LISTE (Stufe 3)
 // ============================================================
-void showFilteredSpoolList(const char* vendor_name, const char* material_prefix) {
-  logSDf("SHOW: FilteredSpoolList vendor=%s mat=%s", vendor_name, material_prefix);
+// Helper: adds a non-clickable info row at the bottom of a list when limit was hit
+static void addListMoreInfo(lv_obj_t* list, StringID str_id) {
+  char buf[96];
+  strncpy(buf, T(str_id), sizeof(buf)-1);
+  buf[sizeof(buf)-1] = '\0';
+
+  lv_obj_t *row = lv_obj_create(list);
+  lv_obj_set_size(row, 452, 48);
+  lv_obj_set_style_bg_color(row, lv_color_hex(0x1a1a08), 0);
+  lv_obj_set_style_radius(row, 6, 0);
+  lv_obj_set_style_border_width(row, 1, 0);
+  lv_obj_set_style_border_color(row, lv_color_hex(0x3a3010), 0);
+  lv_obj_set_style_pad_all(row, 0, 0);
+  lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+  lv_obj_t *lbl = lv_label_create(row);
+  lv_label_set_text(lbl, buf);
+  lv_obj_set_style_text_color(lbl, lv_color_hex(0xf0b838), 0);
+  lv_obj_set_style_text_font(lbl, &lv_font_montserrat_12, 0);
+  lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+  lv_label_set_long_mode(lbl, LV_LABEL_LONG_WRAP);
+  lv_obj_set_width(lbl, 440);
+  lv_obj_center(lbl);
+}
+
+void showFilteredSpoolList(const char* vendor_name, const char* material_prefix, const char* material_full) {
+  logSDf("SHOW: FilteredSpoolList vendor=%s mat=%s matf=%s", vendor_name, material_prefix, material_full ? material_full : "");
   if (scr_link_spools) { lv_obj_del(scr_link_spools); scr_link_spools = nullptr; }
 
   scr_link_spools = buildLinkOverlay();
@@ -6657,7 +6753,7 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
   int display_count = 0;
   for (int i = 0; i < link_spool_count; i++) {
     UnlinkedSpool &sc = link_spools[i];
-    if (sc.existing_tag[0] != '\0') continue;
+    if (sc.existing_tag[0] != '\0' && !(copy_flow_via_list && copy_flow_archived)) continue;
     bool bv = (strncasecmp(sc.vendor, "Bambu", 5) == 0);
     if (link_flow_is_bambu) {
       if (!bv) continue;
@@ -6666,6 +6762,8 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
       if (bv) continue;
       if (vendor_name[0] && strncasecmp(sc.vendor, vendor_name, strlen(vendor_name)) != 0) continue;
       if (material_prefix[0] && strncasecmp(sc.material, material_prefix, strlen(material_prefix)) != 0) continue;
+      // Stage 3: full material name match (exact, case-insensitive)
+      if (material_full && material_full[0] && strcasecmp(sc.material, material_full) != 0) continue;
     }
     display_count++;
   }
@@ -6674,6 +6772,8 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
   if (link_flow_is_bambu) {
     snprintf(title_buf, sizeof(title_buf), "Bambu %s - %d",
       g_tag.material[0] ? g_tag.material : "", display_count);
+  } else if (material_full && material_full[0]) {
+    snprintf(title_buf, sizeof(title_buf), "%.8s %.10s - %d", vendor_name, material_full, display_count);
   } else if (material_prefix[0]) {
     snprintf(title_buf, sizeof(title_buf), "%.8s %.4s - %d", vendor_name, material_prefix, display_count);
   } else {
@@ -6711,7 +6811,13 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
     if (link_flow_is_bambu) {
       if (scr_link_entry) lv_obj_clear_flag(scr_link_entry, LV_OBJ_FLAG_HIDDEN);
     } else {
-      showMaterialList(link_selected_vendor);
+      // NTAG: if stage 3 was actually shown (not auto-skipped), back goes there
+      // otherwise back goes to stage 2 (material prefix list)
+      if (link_stage3_shown) {
+        showMaterialSubList(link_selected_vendor, link_selected_material);
+      } else {
+        showMaterialList(link_selected_vendor);
+      }
     }
   }, LV_EVENT_CLICKED, NULL);
   { lv_obj_t *l = lv_label_create(btn_hdr_back);
@@ -6735,6 +6841,7 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
     if (scr_link_entry)  { lv_obj_del(scr_link_entry);  scr_link_entry  = nullptr; }
     if (scr_link_vendor) { lv_obj_del(scr_link_vendor); scr_link_vendor = nullptr; }
     if (scr_link_mat)    { lv_obj_del(scr_link_mat);    scr_link_mat    = nullptr; }
+    if (scr_link_mat_sub){ lv_obj_del(scr_link_mat_sub);scr_link_mat_sub= nullptr; }
   }, LV_EVENT_CLICKED, NULL);
   { lv_obj_t *l = lv_label_create(btn_hdr_cancel);
     lv_label_set_text(l, LV_SYMBOL_CLOSE);
@@ -6763,10 +6870,11 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
 
   int count = 0;
   for (int i = 0; i < link_spool_count; i++) {
+    if (count >= spool_list_limit) break;  // render limit — full data is still in link_spools[]
     UnlinkedSpool &s = link_spools[i];
 
     // Filter: kein Tag, passender Vendor, passender Material-Prefix
-    if (s.existing_tag[0] != '\0') continue;  // bereits verknuepft
+    if (s.existing_tag[0] != '\0' && !(copy_flow_via_list && copy_flow_archived)) continue;  // bereits verknuepft
     bool bambu_vendor = (strncasecmp(s.vendor, "Bambu", 5) == 0);
     if (link_flow_is_bambu) {
       // Bambu-Flow: vendor muss Bambu enthalten, Material muss passen
@@ -6779,6 +6887,8 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
       if (bambu_vendor) continue;  // Bambu-Spulen ausblenden
       if (vendor_name[0] && strncasecmp(s.vendor, vendor_name, strlen(vendor_name)) != 0) continue;
       if (material_prefix[0] && strncasecmp(s.material, material_prefix, strlen(material_prefix)) != 0) continue;
+      // Stage 3: full material name match (exact, case-insensitive)
+      if (material_full && material_full[0] && strcasecmp(s.material, material_full) != 0) continue;
     }
 
     count++;
@@ -6801,12 +6911,20 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
     lv_obj_align(lbl_id, LV_ALIGN_TOP_LEFT, 6, 5);
 
     // Material + Name zusammen, abgeschnitten wenn zu lang
+    // Avoid duplication when the filament name already starts with the material
+    // (Spoolman often stores names like "PLA+ White" while material is "PLA+")
     lv_obj_t *lbl_name = lv_label_create(row);
     char full_name[64];
-    if (s.material[0])
-      snprintf(full_name, sizeof(full_name), "%s %s", s.material, s.name);
-    else
+    if (s.material[0]) {
+      bool name_has_mat = (s.name[0] && strncasecmp(s.name, s.material, strlen(s.material)) == 0);
+      if (name_has_mat)
+        strncpy(full_name, s.name, sizeof(full_name)-1);
+      else
+        snprintf(full_name, sizeof(full_name), "%s %s", s.material, s.name);
+    } else {
       strncpy(full_name, s.name, sizeof(full_name)-1);
+    }
+    full_name[sizeof(full_name)-1] = '\0';
     lv_label_set_text(lbl_name, full_name);
     lv_obj_set_style_text_color(lbl_name, lv_color_hex(0xe8f0ff), 0);
     lv_obj_set_style_text_font(lbl_name, &lv_font_montserrat_16, 0);
@@ -6881,8 +6999,15 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
 
       // Spulen-Info
       char info[80];
-      snprintf(info, sizeof(info), "#%d  %s %s\n%.0fg / %.0fg",
-        s.id, s.material, s.name, s.remaining, s.total);
+      bool name_has_mat = (s.material[0] && s.name[0] &&
+                           strncasecmp(s.name, s.material, strlen(s.material)) == 0);
+      if (name_has_mat) {
+        snprintf(info, sizeof(info), "#%d  %s\n%.0fg / %.0fg",
+          s.id, s.name, s.remaining, s.total);
+      } else {
+        snprintf(info, sizeof(info), "#%d  %s %s\n%.0fg / %.0fg",
+          s.id, s.material, s.name, s.remaining, s.total);
+      }
       lv_obj_t *lbl_info = lv_label_create(box);
       lv_label_set_text(lbl_info, info);
       lv_obj_set_style_text_color(lbl_info, lv_color_hex(0xc8d8f0), 0);
@@ -6915,7 +7040,14 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
           copy_confirm_remaining = cs.remaining;
           copy_confirm_initial = cs.total;
           copy_confirm_spool_w = cs.spool_weight;
-          snprintf(copy_confirm_name, sizeof(copy_confirm_name), "%s %s (%s)", cs.material, cs.name, cs.vendor);
+          {
+            bool nm = (cs.material[0] && cs.name[0] &&
+                       strncasecmp(cs.name, cs.material, strlen(cs.material)) == 0);
+            if (nm)
+              snprintf(copy_confirm_name, sizeof(copy_confirm_name), "%s (%s)", cs.name, cs.vendor);
+            else
+              snprintf(copy_confirm_name, sizeof(copy_confirm_name), "%s %s (%s)", cs.material, cs.name, cs.vendor);
+          }
           copy_confirm_pending = true;
         } else {
           doLinkPatch(link_spools[cidx].id, link_flow_is_bambu);
@@ -6955,8 +7087,9 @@ void showFilteredSpoolList(const char* vendor_name, const char* material_prefix)
     lv_obj_set_style_text_font(lbl_empty, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_align(lbl_empty, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(lbl_empty, LV_ALIGN_CENTER, 0, -20);
+  } else if (count >= spool_list_limit) {
+    addListMoreInfo(list, STR_LIST_MORE_SPOOLS);
   }
-
 }
 
 // ============================================================
@@ -6966,6 +7099,8 @@ void showMaterialList(const char* vendor_name) {
   logSDf("SHOW: MaterialList vendor=%s", vendor_name);
   if (scr_link_mat) { lv_obj_del(scr_link_mat); scr_link_mat = nullptr; }
   strncpy(link_selected_vendor, vendor_name, sizeof(link_selected_vendor)-1);
+  link_selected_material_full[0] = 0;  // reset on entry — set fresh in stage 3
+  link_stage3_shown = false;
 
   scr_link_mat = buildLinkOverlay();
 
@@ -7012,6 +7147,7 @@ void showMaterialList(const char* vendor_name) {
     logSD("BTN: MatList -> Cancel");
     copy_flow_via_list = false;
     if (scr_link_mat)    { lv_obj_del(scr_link_mat);    scr_link_mat    = nullptr; }
+    if (scr_link_mat_sub){ lv_obj_del(scr_link_mat_sub);scr_link_mat_sub= nullptr; }
     if (scr_link_vendor) { lv_obj_del(scr_link_vendor); scr_link_vendor = nullptr; }
     if (scr_link_entry)  { lv_obj_del(scr_link_entry);  scr_link_entry  = nullptr; }
     if (scr_copy_entry)  { lv_obj_del(scr_copy_entry);  scr_copy_entry  = nullptr; }
@@ -7044,9 +7180,10 @@ void showMaterialList(const char* vendor_name) {
   memset(seen_mats, 0, sizeof(seen_mats));
   memset(mat_counts, 0, sizeof(mat_counts));
 
+  bool mat_limit_hit = false;
   for (int i = 0; i < link_spool_count; i++) {
     UnlinkedSpool &s = link_spools[i];
-    if (s.existing_tag[0] != '\0') continue;
+    if (s.existing_tag[0] != '\0' && !(copy_flow_via_list && copy_flow_archived)) continue;
     if (strncasecmp(s.vendor, vendor_name, strlen(vendor_name)) != 0) continue;
     if (strncasecmp(s.vendor, "Bambu", 5) == 0) continue;
     if (!s.material[0]) continue;
@@ -7055,7 +7192,8 @@ void showMaterialList(const char* vendor_name) {
     for (int j = 0; j < seen_count; j++) {
       if (strncasecmp(seen_mats[j], prefix, 3) == 0) { mat_counts[j]++; found = true; break; }
     }
-    if (!found && seen_count < 20) {
+    if (!found) {
+      if (seen_count >= spool_list_limit) { mat_limit_hit = true; continue; }
       strncpy(seen_mats[seen_count], prefix, 3);
       mat_counts[seen_count] = 1;
       seen_count++;
@@ -7089,8 +7227,9 @@ void showMaterialList(const char* vendor_name) {
     lv_obj_add_event_cb(row, [](lv_event_t *e) {
       int idx = (intptr_t)lv_event_get_user_data(e);
       strncpy(link_selected_material, seen_mats[idx], sizeof(link_selected_material)-1);
+      link_selected_material_full[0] = 0;  // reset for new branch
       if (scr_link_mat) { lv_obj_del(scr_link_mat); scr_link_mat = nullptr; }
-      showFilteredSpoolList(link_selected_vendor, link_selected_material);
+      showMaterialSubList(link_selected_vendor, link_selected_material);
     }, LV_EVENT_CLICKED, (void*)(intptr_t)m);
   }
 
@@ -7101,8 +7240,177 @@ void showMaterialList(const char* vendor_name) {
     lv_obj_set_style_text_font(lbl_empty, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_align(lbl_empty, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(lbl_empty, LV_ALIGN_CENTER, 0, -20);
+  } else if (mat_limit_hit) {
+    addListMoreInfo(list, STR_LIST_MORE_MATS);
   }
 
+}
+
+// ============================================================
+//  LINK-FLOW: FLOW B PFAD 2 — MATERIAL-VOLLNAME-AUSWAHL (Stufe 3)
+//  Dedupliziert s.material exakt fuer Vendor + Material-Prefix.
+//  Bei nur einem Eintrag: direkt zu Stufe 4 (auto-skip).
+// ============================================================
+void showMaterialSubList(const char* vendor_name, const char* material_prefix) {
+  logSDf("SHOW: MaterialSubList vendor=%s mat=%s", vendor_name, material_prefix);
+
+  // First pass: collect unique full material names + counts
+  static char seen_full[20][32] = {};
+  static int  full_counts[20]   = {};
+  static int  full_seen_count   = 0;
+  full_seen_count = 0;
+  memset(seen_full, 0, sizeof(seen_full));
+  memset(full_counts, 0, sizeof(full_counts));
+
+  bool full_limit_hit = false;
+  for (int i = 0; i < link_spool_count; i++) {
+    UnlinkedSpool &s = link_spools[i];
+    if (s.existing_tag[0] != '\0' && !(copy_flow_via_list && copy_flow_archived)) continue;
+    if (strncasecmp(s.vendor, vendor_name, strlen(vendor_name)) != 0) continue;
+    if (strncasecmp(s.vendor, "Bambu", 5) == 0) continue;
+    if (!s.material[0]) continue;
+    if (strncasecmp(s.material, material_prefix, strlen(material_prefix)) != 0) continue;
+
+    bool found = false;
+    for (int j = 0; j < full_seen_count; j++) {
+      if (strcasecmp(seen_full[j], s.material) == 0) { full_counts[j]++; found = true; break; }
+    }
+    if (!found) {
+      if (full_seen_count >= spool_list_limit) { full_limit_hit = true; continue; }
+      strncpy(seen_full[full_seen_count], s.material, sizeof(seen_full[0])-1);
+      full_counts[full_seen_count] = 1;
+      full_seen_count++;
+    }
+  }
+
+  // Auto-skip stage 3 when only one full name found — go directly to stage 4
+  if (full_seen_count == 1 && !full_limit_hit) {
+    logSDf("MaterialSubList auto-skip: only %s", seen_full[0]);
+    strncpy(link_selected_material_full, seen_full[0], sizeof(link_selected_material_full)-1);
+    link_stage3_shown = false;  // not actually rendered — back from stage 4 must skip stage 3
+    showFilteredSpoolList(vendor_name, material_prefix, link_selected_material_full);
+    return;
+  }
+
+  link_stage3_shown = true;  // actually rendered
+  if (scr_link_mat_sub) { lv_obj_del(scr_link_mat_sub); scr_link_mat_sub = nullptr; }
+  scr_link_mat_sub = buildLinkOverlay();
+
+  char title_buf[48];
+  snprintf(title_buf, sizeof(title_buf), "%.16s | %.4s", vendor_name, material_prefix);
+
+  // Header with Back + Cancel
+  lv_obj_t *hdr_ms = lv_obj_create(scr_link_mat_sub);
+  lv_obj_set_size(hdr_ms, 480, 52); lv_obj_set_pos(hdr_ms, 0, 0);
+  lv_obj_set_style_bg_color(hdr_ms, lv_color_hex(0x0a1020), 0);
+  lv_obj_set_style_border_width(hdr_ms, 0, 0);
+  lv_obj_set_style_pad_all(hdr_ms, 0, 0);
+  lv_obj_set_style_radius(hdr_ms, 0, 0);
+  lv_obj_clear_flag(hdr_ms, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *lbl_title = lv_label_create(hdr_ms);
+  lv_label_set_text(lbl_title, title_buf);
+  lv_obj_set_style_text_color(lbl_title, lv_color_hex(0x28d49a), 0);
+  lv_obj_set_style_text_font(lbl_title, &lv_font_montserrat_16, 0);
+  lv_obj_align(lbl_title, LV_ALIGN_CENTER, 0, 0);
+
+  lv_obj_t *btn_ms_back = lv_btn_create(hdr_ms);
+  lv_obj_set_size(btn_ms_back, 44, 44); lv_obj_set_pos(btn_ms_back, 4, 4);
+  lv_obj_set_style_bg_color(btn_ms_back, lv_color_hex(0x0a1828), 0);
+  lv_obj_set_style_bg_color(btn_ms_back, lv_color_hex(0x1a3060), LV_STATE_PRESSED);
+  lv_obj_set_style_radius(btn_ms_back, 8, 0);
+  lv_obj_set_style_shadow_width(btn_ms_back, 0, 0);
+  lv_obj_set_style_border_width(btn_ms_back, 0, 0);
+  lv_obj_add_event_cb(btn_ms_back, [](lv_event_t *e) {
+    logSD("BTN: MatSubList -> Back");
+    if (scr_link_mat_sub) { lv_obj_del(scr_link_mat_sub); scr_link_mat_sub = nullptr; }
+    showMaterialList(link_selected_vendor);
+  }, LV_EVENT_CLICKED, NULL);
+  { lv_obj_t *l = lv_label_create(btn_ms_back); lv_label_set_text(l, LV_SYMBOL_LEFT);
+    lv_obj_set_style_text_color(l, lv_color_hex(0x28d49a), 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0); lv_obj_center(l); }
+
+  lv_obj_t *btn_ms_cancel = lv_btn_create(hdr_ms);
+  lv_obj_set_size(btn_ms_cancel, 44, 44);
+  lv_obj_align(btn_ms_cancel, LV_ALIGN_RIGHT_MID, -4, 0);
+  lv_obj_set_style_bg_color(btn_ms_cancel, lv_color_hex(0x3a1010), 0);
+  lv_obj_set_style_bg_color(btn_ms_cancel, lv_color_hex(0x602020), LV_STATE_PRESSED);
+  lv_obj_set_style_radius(btn_ms_cancel, 8, 0);
+  lv_obj_set_style_shadow_width(btn_ms_cancel, 0, 0);
+  lv_obj_set_style_border_width(btn_ms_cancel, 0, 0);
+  lv_obj_add_event_cb(btn_ms_cancel, [](lv_event_t *e) {
+    logSD("BTN: MatSubList -> Cancel");
+    copy_flow_via_list = false;
+    if (scr_link_mat_sub){ lv_obj_del(scr_link_mat_sub);scr_link_mat_sub= nullptr; }
+    if (scr_link_mat)    { lv_obj_del(scr_link_mat);    scr_link_mat    = nullptr; }
+    if (scr_link_vendor) { lv_obj_del(scr_link_vendor); scr_link_vendor = nullptr; }
+    if (scr_link_entry)  { lv_obj_del(scr_link_entry);  scr_link_entry  = nullptr; }
+    if (scr_copy_entry)  { lv_obj_del(scr_copy_entry);  scr_copy_entry  = nullptr; }
+  }, LV_EVENT_CLICKED, NULL);
+  { lv_obj_t *l = lv_label_create(btn_ms_cancel); lv_label_set_text(l, LV_SYMBOL_CLOSE);
+    lv_obj_set_style_text_color(l, lv_color_hex(0xff8080), 0);
+    lv_obj_set_style_text_font(l, &lv_font_montserrat_18, 0); lv_obj_center(l); }
+
+  lv_obj_t *div = lv_obj_create(scr_link_mat_sub);
+  lv_obj_set_size(div, 480, 1); lv_obj_set_pos(div, 0, 52);
+  lv_obj_set_style_bg_color(div, lv_color_hex(0x1a3060), 0);
+  lv_obj_set_style_border_width(div, 0, 0);
+  lv_obj_set_style_radius(div, 0, 0);
+  lv_obj_set_style_pad_all(div, 0, 0);
+
+  lv_obj_t *list = lv_obj_create(scr_link_mat_sub);
+  lv_obj_set_size(list, 460, 264);
+  lv_obj_set_pos(list, 10, 56);
+  lv_obj_set_style_bg_color(list, lv_color_hex(0x0a1020), 0);
+  lv_obj_set_style_border_width(list, 0, 0);
+  lv_obj_set_style_pad_all(list, 2, 0);
+  lv_obj_set_style_radius(list, 0, 0);
+  lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_scroll_dir(list, LV_DIR_VER);
+
+  for (int m = 0; m < full_seen_count; m++) {
+    lv_obj_t *row = lv_btn_create(list);
+    lv_obj_set_size(row, 452, 50);
+    lv_obj_set_style_bg_color(row, lv_color_hex(0x0a1828), 0);
+    lv_obj_set_style_bg_color(row, lv_color_hex(0x1a3060), LV_STATE_PRESSED);
+    lv_obj_set_style_radius(row, 6, 0);
+    lv_obj_set_style_shadow_width(row, 0, 0);
+    lv_obj_set_style_border_width(row, 1, 0);
+    lv_obj_set_style_border_color(row, lv_color_hex(0x1a2840), 0);
+    lv_obj_set_style_pad_all(row, 0, 0);
+
+    lv_obj_t *lbl_full = lv_label_create(row);
+    lv_label_set_text(lbl_full, seen_full[m]);
+    lv_obj_set_style_text_color(lbl_full, lv_color_hex(0xf0b838), 0);
+    lv_obj_set_style_text_font(lbl_full, &lv_font_montserrat_18, 0);
+    lv_obj_align(lbl_full, LV_ALIGN_LEFT_MID, 16, 0);
+    lv_label_set_long_mode(lbl_full, LV_LABEL_LONG_DOT);
+    lv_obj_set_width(lbl_full, 340);
+
+    lv_obj_t *lbl_cnt = lv_label_create(row);
+    char cnt_buf[12]; snprintf(cnt_buf, sizeof(cnt_buf), "%d x", full_counts[m]);
+    lv_label_set_text(lbl_cnt, cnt_buf);
+    lv_obj_set_style_text_color(lbl_cnt, lv_color_hex(0x4a6fa0), 0);
+    lv_obj_set_style_text_font(lbl_cnt, &lv_font_montserrat_16, 0);
+    lv_obj_align(lbl_cnt, LV_ALIGN_RIGHT_MID, -16, 0);
+
+    lv_obj_add_event_cb(row, [](lv_event_t *e) {
+      int idx = (intptr_t)lv_event_get_user_data(e);
+      strncpy(link_selected_material_full, seen_full[idx], sizeof(link_selected_material_full)-1);
+      if (scr_link_mat_sub) { lv_obj_del(scr_link_mat_sub); scr_link_mat_sub = nullptr; }
+      showFilteredSpoolList(link_selected_vendor, link_selected_material, link_selected_material_full);
+    }, LV_EVENT_CLICKED, (void*)(intptr_t)m);
+  }
+
+  if (full_seen_count == 0) {
+    lv_obj_t *lbl_empty = lv_label_create(scr_link_mat_sub);
+    lv_label_set_text(lbl_empty, T(STR_NO_MATERIALS));
+    lv_obj_set_style_text_color(lbl_empty, lv_color_hex(0xf0b838), 0);
+    lv_obj_set_style_text_font(lbl_empty, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_align(lbl_empty, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(lbl_empty, LV_ALIGN_CENTER, 0, -20);
+  } else if (full_limit_hit) {
+    addListMoreInfo(list, STR_LIST_MORE_MATS);
+  }
 }
 
 // ============================================================
@@ -7117,7 +7425,7 @@ void showVendorList() {
   // Zaehle Spulen gesamt (ohne Bambu, ohne bereits verknuepft)
   int total_unlinked = 0;
   for (int i = 0; i < link_spool_count; i++) {
-    if (link_spools[i].existing_tag[0] != '\0') continue;
+    if (link_spools[i].existing_tag[0] != '\0' && !(copy_flow_via_list && copy_flow_archived)) continue;
     if (strncasecmp(link_spools[i].vendor, "Bambu", 5) == 0) continue;
     total_unlinked++;
   }
@@ -7197,16 +7505,18 @@ void showVendorList() {
   memset(seen_vendors, 0, sizeof(seen_vendors));
   memset(vendor_counts, 0, sizeof(vendor_counts));
 
+  bool vendor_limit_hit = false;
   for (int i = 0; i < link_spool_count; i++) {
     UnlinkedSpool &s = link_spools[i];
-    if (s.existing_tag[0] != '\0') continue;
+    if (s.existing_tag[0] != '\0' && !(copy_flow_via_list && copy_flow_archived)) continue;
     if (strncasecmp(s.vendor, "Bambu", 5) == 0) continue;
     const char* vn = s.vendor[0] ? s.vendor : "Unbekannt";
     bool found = false;
     for (int j = 0; j < seen_v; j++) {
       if (strcasecmp(seen_vendors[j], vn) == 0) { vendor_counts[j]++; found = true; break; }
     }
-    if (!found && seen_v < 20) {
+    if (!found) {
+      if (seen_v >= spool_list_limit) { vendor_limit_hit = true; continue; }
       strncpy(seen_vendors[seen_v], vn, 31);
       vendor_counts[seen_v] = 1;
       seen_v++;
@@ -7253,6 +7563,8 @@ void showVendorList() {
     lv_obj_set_style_text_font(lbl_empty, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_align(lbl_empty, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(lbl_empty, LV_ALIGN_CENTER, 0, -20);
+  } else if (vendor_limit_hit) {
+    addListMoreInfo(list, STR_LIST_MORE_VENDORS);
   }
 
 }
@@ -7267,6 +7579,8 @@ void closeLinkEntryPopup() {
 void showLinkEntryPopup(bool is_bambu) {
   logSDf("SHOW: LinkEntryPopup bambu=%d", (int)is_bambu);
   link_selected_material[0] = 0;  // reset material selection for each new flow
+  link_selected_material_full[0] = 0;
+  link_stage3_shown = false;
   closeLinkEntryPopup();
   link_flow_is_bambu = is_bambu;
   link_id_input[0]   = '\0';
@@ -7344,7 +7658,7 @@ void showLinkEntryPopup(bool is_bambu) {
     // Load and pre-filter spools, then start appropriate flow
     fetchAllSpoolsForLink(link_flow_is_bambu, link_flow_is_bambu ? g_tag.material : "");
     if (link_flow_is_bambu) {
-      showFilteredSpoolList("", "");  // Flow A: direct list (already material-filtered)
+      showFilteredSpoolList("", "", "");  // Flow A: direct list (already material-filtered)
     } else {
       showVendorList();               // Flow B: 3-step
     }
@@ -7384,6 +7698,7 @@ void closeLinkList() {
   if (scr_link_id)     { lv_obj_del(scr_link_id);     scr_link_id     = nullptr; }
   if (scr_link_vendor) { lv_obj_del(scr_link_vendor); scr_link_vendor = nullptr; }
   if (scr_link_mat)    { lv_obj_del(scr_link_mat);    scr_link_mat    = nullptr; }
+  if (scr_link_mat_sub){ lv_obj_del(scr_link_mat_sub);scr_link_mat_sub= nullptr; }
   if (scr_link_spools) { lv_obj_del(scr_link_spools); scr_link_spools = nullptr; }
 }
 
@@ -8917,8 +9232,14 @@ void showCopySpoolList() {
 
     lv_obj_t *lbl_name = lv_label_create(row);
     char full_name[64];
-    if (s.material[0]) snprintf(full_name, sizeof(full_name), "%s %s", s.material, s.name);
-    else strncpy(full_name, s.name, sizeof(full_name)-1);
+    if (s.material[0]) {
+      bool nm = (s.name[0] && strncasecmp(s.name, s.material, strlen(s.material)) == 0);
+      if (nm) strncpy(full_name, s.name, sizeof(full_name)-1);
+      else snprintf(full_name, sizeof(full_name), "%s %s", s.material, s.name);
+    } else {
+      strncpy(full_name, s.name, sizeof(full_name)-1);
+    }
+    full_name[sizeof(full_name)-1] = '\0';
     lv_label_set_text(lbl_name, full_name);
     lv_obj_set_style_text_color(lbl_name, lv_color_hex(0xe8f0ff), 0);
     lv_obj_set_style_text_font(lbl_name, &lv_font_montserrat_16, 0);
@@ -8974,6 +9295,9 @@ void showCopySpoolList() {
       copy_confirm_spool_w = spw;
       strncpy(copy_confirm_name, tmpl_name, sizeof(copy_confirm_name)-1);
     }, LV_EVENT_CLICKED, NULL);
+  }
+  if (link_spool_count > spool_list_limit) {
+    addListMoreInfo(list, STR_LIST_MORE_SPOOLS);
   }
 }
 
@@ -9090,6 +9414,8 @@ void showCopyIdInputPopup() {
 void showCopyEntryPopup() {
   logSD("SHOW: CopyEntryPopup");
   link_selected_material[0] = 0;  // clear so NTAG always goes via vendor/material picker
+  link_selected_material_full[0] = 0;
+  link_stage3_shown = false;
   closeCopyEntryPopup();
 
   scr_copy_entry = lv_obj_create(lv_scr_act());
@@ -9177,15 +9503,14 @@ void showCopyEntryPopup() {
       // Bambu: use material filter if available, else show all
       fetchSpoolsForCopy(false, strlen(g_tag.material) > 0 ? g_tag.material : "");
       showCopySpoolList();
-    } else if (!is_bambu_tag && strlen(link_selected_material) > 0) {
-      // NTAG: material was previously selected in vendor/mat picker
-      fetchSpoolsForCopy(false, link_selected_material);
-      showCopySpoolList();
     } else {
-      // NTAG without material selection: vendor/material picker first
+      // NTAG: always go via 4-stage vendor/material picker
       copy_flow_via_list = true;
       link_flow_is_bambu = false;
-      fetchAllSpoolsForLink(false, "");  // load all non-Bambu spools for picker
+      link_selected_material[0] = 0;
+      link_selected_material_full[0] = 0;
+      link_stage3_shown = false;
+      fetchAllSpoolsForLink(false, "", false);  // active spools only
       showVendorList();
     }
   }, LV_EVENT_CLICKED, NULL);
@@ -9214,13 +9539,14 @@ void showCopyEntryPopup() {
     if (is_bambu_tag) {
       fetchSpoolsForCopy(true, strlen(g_tag.material) > 0 ? g_tag.material : "");
       showCopySpoolList();
-    } else if (!is_bambu_tag && strlen(link_selected_material) > 0) {
-      fetchSpoolsForCopy(true, link_selected_material);
-      showCopySpoolList();
     } else {
+      // NTAG: always go via 4-stage vendor/material picker (archived only)
       copy_flow_via_list = true;
       link_flow_is_bambu = false;
-      fetchAllSpoolsForLink(false, "");
+      link_selected_material[0] = 0;
+      link_selected_material_full[0] = 0;
+      link_stage3_shown = false;
+      fetchAllSpoolsForLink(false, "", true);  // archived only
       showVendorList();
     }
   }, LV_EVENT_CLICKED, NULL);
@@ -10079,16 +10405,6 @@ void querySpoolman(const char* tray_uuid) {
   Serial.printf("DBG free heap: %d bytes  free PSRAM: %d bytes\n", ESP.getFreeHeap(), ESP.getFreePsram());
   if (sd_verbose) logSDf("[verbose] heap=%d PSRAM=%d (before Spoolman GET)",
     ESP.getFreeHeap(), ESP.getFreePsram());
-  http.begin(String(cfg_spoolman_base) + "/api/v1/spool");
-  http.setTimeout(8000);
-  int code = http.GET();
-  if (code != 200) {
-    Serial.printf("Spoolman HTTP error: %d\n", code);
-    logSDf("Spoolman: HTTP error %d", code);
-    lv_label_set_text(lbl_spoolman_weight, T(STR_API_ERROR));
-    http.end();
-    return;
-  }
 
   // Filter: only parse needed fields — reduces RAM, works with 100+ spools
   // Filter must be Array-wrapped to match the API array response structure
@@ -10111,18 +10427,54 @@ void querySpoolman(const char* tray_uuid) {
   filter_spool["filament"]["vendor"]["id"] = true;
   filter_spool["filament"]["vendor"]["name"] = true;
 
-  // Stream directly from HTTP — avoids allocating a 40KB+ String in RAM
-  WiFiClient* stream = http.getStreamPtr();
   // Use PSRAM for this document — frees internal RAM for LVGL
   SpiRamAllocator psram_alloc;
   JsonDocument doc(&psram_alloc);
-  DeserializationError err = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
-  http.end();
+  DeserializationError err = DeserializationError::Ok;
+
+  // Up to 2 attempts: first try, then 1 retry on IncompleteInput / connection issues.
+  // 20s timeout is generous for large Spoolman datasets (200+ spools over WiFi).
+  for (int attempt = 1; attempt <= 2; attempt++) {
+    if (attempt > 1) {
+      Serial.printf("Spoolman: retry attempt %d after %s\n", attempt, err.c_str());
+      logSDf("Spoolman: retry attempt %d (prev err=%s)", attempt, err.c_str());
+      delay(300);  // brief pause before retry
+      doc.clear();
+    }
+
+    http.begin(String(cfg_spoolman_base) + "/api/v1/spool");
+    http.setTimeout(20000);
+    int code = http.GET();
+    if (code != 200) {
+      Serial.printf("Spoolman HTTP error: %d (attempt %d)\n", code, attempt);
+      logSDf("Spoolman: HTTP error %d (attempt %d)", code, attempt);
+      http.end();
+      if (attempt == 2) {
+        lv_label_set_text(lbl_spoolman_weight, T(STR_API_ERROR));
+        return;
+      }
+      continue;  // retry on HTTP error too
+    }
+
+    // Stream directly from HTTP — avoids allocating a 40KB+ String in RAM
+    WiFiClient* stream = http.getStreamPtr();
+    err = deserializeJson(doc, *stream, DeserializationOption::Filter(filter));
+    http.end();
+
+    if (!err) break;  // success
+    // Parse failed -> retry only on transient stream issues
+    if (err != DeserializationError::IncompleteInput &&
+        err != DeserializationError::EmptyInput) {
+      break;  // other errors are not transient -> don't retry
+    }
+  }
+
   Serial.printf("DBG free heap after parse: %d bytes  free PSRAM: %d bytes\n", ESP.getFreeHeap(), ESP.getFreePsram());
   if (sd_verbose) logSDf("[verbose] heap=%d PSRAM=%d (after Spoolman parse)",
     ESP.getFreeHeap(), ESP.getFreePsram());
   if (err) {
-    Serial.printf("Spoolman JSON error: %s\n", err.c_str());
+    Serial.printf("Spoolman JSON error (final): %s\n", err.c_str());
+    logSDf("Spoolman: JSON error final=%s", err.c_str());
     lv_label_set_text(lbl_spoolman_weight, T(STR_LINK_JSON_ERR));
     return;
   }
@@ -10727,6 +11079,7 @@ void loop() {
     if (scr_copy_list) lv_obj_add_flag(scr_copy_list, LV_OBJ_FLAG_HIDDEN);
     if (scr_link_spools) { lv_obj_del(scr_link_spools); scr_link_spools = nullptr; }
     if (scr_link_mat)    { lv_obj_del(scr_link_mat);    scr_link_mat    = nullptr; }
+    if (scr_link_mat_sub){ lv_obj_del(scr_link_mat_sub);scr_link_mat_sub= nullptr; }
     if (scr_link_vendor) { lv_obj_del(scr_link_vendor); scr_link_vendor = nullptr; }
     if (scr_link_entry)  { lv_obj_del(scr_link_entry);  scr_link_entry  = nullptr; }
     if (scr_copy_entry)  { lv_obj_del(scr_copy_entry);  scr_copy_entry  = nullptr; }
@@ -10787,6 +11140,55 @@ void loop() {
   if (show_factor_pending) {
     show_factor_pending = false;
     showFactorScreen();
+  }
+  if (show_lastused_pending) {
+    show_lastused_pending = false;
+    // Always rebuild for fresh button states (active mode highlighting)
+    if (scr_lastused) { lv_obj_del(scr_lastused); scr_lastused = nullptr; }
+    buildLastUsedScreen();
+    hideAllOverlays();
+    lv_obj_clear_flag(scr_lastused, LV_OBJ_FLAG_HIDDEN);
+  }
+  if (show_spoolman_pending) {
+    show_spoolman_pending = false;
+    // Always rebuild — sp_ip_input is reset on entry
+    if (scr_spoolman) { lv_obj_del(scr_spoolman); scr_spoolman = nullptr; }
+    if (scr_spoolman_fail) { lv_obj_del(scr_spoolman_fail); scr_spoolman_fail = nullptr; }
+    buildSpoolmanScreen();
+    hideAllOverlays();
+    lv_obj_clear_flag(scr_spoolman, LV_OBJ_FLAG_HIDDEN);
+  }
+  if (show_connection_from_spoolman_pending) {
+    show_connection_from_spoolman_pending = false;
+    if (scr_spoolman)   { lv_obj_del(scr_spoolman);   scr_spoolman   = nullptr; }
+    if (scr_connection) { lv_obj_del(scr_connection); scr_connection = nullptr; }
+    buildConnectionScreen();
+    hideAllOverlays();
+    lv_obj_clear_flag(scr_connection, LV_OBJ_FLAG_HIDDEN);
+  }
+  if (show_ota_pending) {
+    show_ota_pending = false;
+    if (scr_ota) { lv_obj_del(scr_ota); scr_ota = nullptr; }
+    buildOtaScreen();
+    hideAllOverlays();
+    lv_obj_clear_flag(scr_ota, LV_OBJ_FLAG_HIDDEN);
+  }
+  if (show_info_pending) {
+    show_info_pending = false;
+    if (scr_info) { lv_obj_del(scr_info); scr_info = nullptr; }
+    showInfoScreen();  // builds + shows scr_info
+  }
+  if (show_system_pending) {
+    show_system_pending = false;
+    // Coming back from OTA / Info / Language to System screen
+    if (scr_ota)         { lv_obj_del(scr_ota);         scr_ota         = nullptr; }
+    if (scr_ota_browser) { lv_obj_del(scr_ota_browser); scr_ota_browser = nullptr; }
+    if (scr_ota_github)  { lv_obj_del(scr_ota_github);  scr_ota_github  = nullptr; }
+    if (scr_info)        { lv_obj_del(scr_info);        scr_info        = nullptr; }
+    if (scr_system)      { lv_obj_del(scr_system);      scr_system      = nullptr; }
+    buildSystemScreen();
+    hideAllOverlays();
+    lv_obj_clear_flag(scr_system, LV_OBJ_FLAG_HIDDEN);
   }
   if (skip_setup_pending) {
     skip_setup_pending = false;
@@ -10859,15 +11261,15 @@ void loop() {
     if (sm_spool_weight > 0) {
       float netto = scale_weight_g - sm_spool_weight;
       if (netto < 0) netto = 0;
-      snprintf(w_str, sizeof(w_str), "%.1f g", netto);
+      fmtG(w_str, sizeof(w_str), netto);
     } else {
-      snprintf(w_str, sizeof(w_str), "%.1f g", scale_weight_g);
+      fmtG(w_str, sizeof(w_str), scale_weight_g);
     }
     lv_label_set_text(lbl_scale_weight, w_str);
     // Also update live weight in calibration screen if open
     if (lbl_factor_cal_weight && scr_factor && !lv_obj_has_flag(scr_factor, LV_OBJ_FLAG_HIDDEN)) {
       char cal_str[16];
-      snprintf(cal_str, sizeof(cal_str), "%.1f g", scale_weight_g);  // Fix 6: raw weight
+      fmtG(cal_str, sizeof(cal_str), scale_weight_g);  // Fix 6: raw weight
       lv_label_set_text(lbl_factor_cal_weight, cal_str);
     }
 
@@ -10889,7 +11291,7 @@ void loop() {
       // Live total (with spool)
       if (lbl_spoolman_dried) {
         char lt_str[16];
-        snprintf(lt_str, sizeof(lt_str), "%.1f g", scale_weight_g);
+        fmtG(lt_str, sizeof(lt_str), scale_weight_g);
         lv_label_set_text(lbl_spoolman_dried, lt_str);
         lv_obj_set_style_text_color(lbl_spoolman_dried, lv_color_hex(0x8ab0d8), 0);
       }
@@ -10899,7 +11301,7 @@ void loop() {
         float ohne_beutel = scale_weight_g - sm_spool_weight - bag_weight_g;
         if (ohne_beutel < 0) ohne_beutel = 0;
         char b_str[16];
-        snprintf(b_str, sizeof(b_str), "%.1f g", ohne_beutel);
+        fmtG(b_str, sizeof(b_str), ohne_beutel);
         lv_label_set_text(lbl_keys, b_str);
         lv_obj_set_style_text_color(lbl_keys, lv_color_hex(0xf0b838), 0);  // same as scale netto
 
@@ -10918,7 +11320,7 @@ void loop() {
       if (lbl_bag_sm_diff) lv_label_set_text(lbl_bag_sm_diff, "");
       if (lbl_spoolman_dried) {
         char lt_str[16];
-        snprintf(lt_str, sizeof(lt_str), "%.1f g", scale_weight_g);
+        fmtG(lt_str, sizeof(lt_str), scale_weight_g);
         lv_label_set_text(lbl_spoolman_dried, lt_str);
       }
       if (lbl_keys) lv_label_set_text(lbl_keys, "");

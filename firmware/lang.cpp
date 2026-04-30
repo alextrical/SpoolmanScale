@@ -471,4 +471,8 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Waage und WiFi werden gestartet...", "Starting up, please wait..." },  // STR_BOOTING
   { "Neustart",                 "Reboot"                     },  // STR_BTN_REBOOT
   { "Geraet neu starten",       "Restart device"             },  // STR_BTN_REBOOT_SUB
+  { "Ganze g",                  "Whole g"                    },  // STR_WHOLE_GRAM
+  { "Mehr Spulen gefunden - nicht gelistet? Per Spool-ID verknuepfen",   "More spools found - not listed? Use Spool-ID"   },  // STR_LIST_MORE_SPOOLS
+  { "Mehr Hersteller gefunden - nicht gelistet? Per Spool-ID verknuepfen", "More vendors found - not listed? Use Spool-ID" },  // STR_LIST_MORE_VENDORS
+  { "Mehr Materialien gefunden - nicht gelistet? Per Spool-ID verknuepfen", "More materials found - not listed? Use Spool-ID" },  // STR_LIST_MORE_MATS
 };
