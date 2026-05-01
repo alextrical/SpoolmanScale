@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 // ============================================================
 //  SpoolmanScale – Bambu NFC Tag Reader & Decoder
 //  Board:   WT32-SC01 Plus (ESP32-S3)
@@ -5633,7 +5635,8 @@ void patchSpoolmanWeight(float remaining) {
       isoToDe(today_iso, today_local, sizeof(today_local));
       strncpy(sm_last_used, today_local, sizeof(sm_last_used)-1);
       char disp[48];
-      lastUsedDisplayStr(today_local, disp, sizeof(disp));
+      // lastUsedDisplayStr(today_local, disp, sizeof(disp));
+      strftime((char*)disp, sizeof(disp), "%Y-%m-%d", (struct tm*)&today_local);
       lv_label_set_text(lbl_last_used, disp);
     }
     Serial.printf("OK: %.1fg saved\n", remaining);

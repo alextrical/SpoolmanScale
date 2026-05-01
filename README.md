@@ -213,6 +213,11 @@ Connect the four wires of the YZC-133 load cell to the NAU7802 screw terminals:
 
 The USB-C panel mount extension needs to be trimmed before installation. Using a utility knife, carefully shorten the connector housing little by little until it no longer protrudes beyond the edge of the display. Take your time – small cuts at a time. Once flush, it will fit cleanly into the enclosure.
 
+## Compiling Quick Start
+1. Clone: `git clone https://github.com/Niko11111/spoolmanscale.git`
+2. Open in VS Code + PlatformIO extension.
+3. Build/Upload: `pio run` / `pio run -t upload`
+
 ### Pictures
 <div align="center">
 <img src="images/spoolmanscale_assembly_1.jpeg" width="400"> <img src="images/spoolmanscale_assembly_2.jpeg" width="400">
