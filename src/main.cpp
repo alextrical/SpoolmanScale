@@ -1728,7 +1728,7 @@ void checkAndCreateExtraFields(bool create_missing) {
   int ef_count = REQUIRED_EXTRA_FIELDS_BASE_COUNT;
   bool field_exists[8] = {false};
   if (code == 200 && payload.length() > 0) {
-    DynamicJsonDocument doc(8192);
+    JsonDocument doc;
     if (!deserializeJson(doc, payload)) {
       JsonArray arr = doc.as<JsonArray>();
       for (JsonObject f : arr) {
@@ -2560,7 +2560,7 @@ void buildSpoolmanScreen() {
     hci.begin(String(cfg_spoolman_base) + "/api/v1/info");
     hci.setTimeout(3000);
     if (hci.GET() == 200) {
-      StaticJsonDocument<256> idoc;
+      JsonDocument idoc;
       if (!deserializeJson(idoc, hci.getString())) {
         strncpy(sm_ver, idoc["version"] | "?", sizeof(sm_ver)-1);
       }
@@ -4401,7 +4401,7 @@ void doGithubOtaCheckSilent() {
   String payload = http.getString();
   http.end();
 
-  DynamicJsonDocument doc(4096);
+  JsonDocument doc;
   doc.clear();
   if (deserializeJson(doc, payload)) return;
 
@@ -4462,7 +4462,7 @@ void doGithubOtaCheck() {
   http.end();
 
   // Parse tag_name
-  DynamicJsonDocument doc(2048);
+  JsonDocument doc;
   doc.clear();
   if (deserializeJson(doc, payload)) {
     lv_label_set_text(lbl_gh_status, "JSON error");
@@ -5827,9 +5827,9 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
   String payload = http.getString();
   http.end();
 
-  StaticJsonDocument<384> filterL;
+  JsonDocument filterL;
   JsonArray filterL_arr = filterL.to<JsonArray>();
-  JsonObject fL = filterL_arr.createNestedObject();
+  JsonObject fL = filterL_arr.add<JsonObject>();
   fL["id"] = true;
   fL["remaining_weight"] = true;
   fL["extra"]["tag"] = true;
@@ -5856,14 +5856,14 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
 
     // Skip already-linked spools
     String existing_tag = "";
-    if (spool.containsKey("extra") && spool["extra"].containsKey("tag")) {
+    if (spool["extra"].is<JsonObject>() && spool["extra"]["tag"].is<const char*>()) {
       existing_tag = spool["extra"]["tag"].as<String>();
       existing_tag.replace("\"",""); existing_tag.trim();
     }
     if (existing_tag.length() > 0) { skipped_tag++; count_linked++; continue; }
 
     String vname = "";
-    if (spool["filament"].containsKey("vendor") && !spool["filament"]["vendor"].isNull())
+    if (spool["filament"]["vendor"].is<const char*>())
       vname = spool["filament"]["vendor"]["name"] | String("");
     vname.trim();
     bool bambu_vendor = (strncasecmp(vname.c_str(), "Bambu", 5) == 0);
@@ -5928,14 +5928,14 @@ void fetchAllSpoolsForLink(bool is_bambu, const char* material_filter) {
     if (link_spool_count >= alloc_count) break;
 
     String existing_tag = "";
-    if (spool.containsKey("extra") && spool["extra"].containsKey("tag")) {
+    if (spool["extra"].is<JsonObject>() && spool["extra"]["tag"].is<const char*>()) {
       existing_tag = spool["extra"]["tag"].as<String>();
       existing_tag.replace("\"",""); existing_tag.trim();
     }
     if (existing_tag.length() > 0) continue;
 
     String vname = "";
-    if (spool["filament"].containsKey("vendor") && !spool["filament"]["vendor"].isNull())
+    if (spool["filament"]["vendor"].is<const char*>())
       vname = spool["filament"]["vendor"]["name"] | String("");
     vname.trim();
     bool bambu_vendor = (strncasecmp(vname.c_str(), "Bambu", 5) == 0);
@@ -6368,14 +6368,14 @@ void linkIdLookupAndPatch(int entered_id, bool is_bambu) {
   String payload = http.getString();
   http.end();
 
-  DynamicJsonDocument doc(8192);
+  JsonDocument doc;
   if (deserializeJson(doc, payload)) {
     if (lbl_link_id_status) lv_label_set_text(lbl_link_id_status, T(STR_LINK_JSON_ERR));
     return;
   }
 
   String existing = "";
-  if (doc.containsKey("extra") && doc["extra"].containsKey("tag")) {
+  if (doc["extra"].is<JsonObject>() && doc["extra"]["tag"].is<const char*>()) {
     existing = doc["extra"]["tag"].as<String>();
     existing.replace("\"",""); existing.trim();
   }
@@ -8572,7 +8572,7 @@ void doCopySpoolCreate(int template_filament_id, float template_initial, float t
   if (code == 200 || code == 201) {
     String resp = http.getString();
     http.end();
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;
     if (deserializeJson(doc, resp) == DeserializationError::Ok) {
       int new_id = doc["id"] | 0;
       if (new_id > 0) {
@@ -9063,7 +9063,7 @@ void showCopyIdInputPopup() {
           lv_label_set_text(lbl_copy_id_status, err_buf);
           return;
         }
-        StaticJsonDocument<512> doc;
+        JsonDocument doc;
         deserializeJson(doc, hc.getStream());
         hc.end();
         int fid      = doc["filament"]["id"] | 0;
@@ -9859,7 +9859,7 @@ void wifiConnect() {
           if (ic == 200) {
             String info = hci.getString();
             hci.end();
-            StaticJsonDocument<256> idoc;
+            JsonDocument idoc;
             if (!deserializeJson(idoc, info)) {
               const char* ver = idoc["version"] | "?";
               logSDf("Spoolman version: %s", ver);
@@ -9915,7 +9915,7 @@ void querySpoolmanById(int spool_id) {
   if (sd_verbose) logSDf("[verbose] heap=%d PSRAM=%d (after byID parse, payload=%dB)",
     ESP.getFreeHeap(), ESP.getFreePsram(), payload.length());
 
-  DynamicJsonDocument doc(8192);
+  JsonDocument doc;
   if (deserializeJson(doc, payload)) {
     Serial.println("querySpoolmanById: JSON error");
     logSD("Spoolman byID: JSON error");
@@ -9944,7 +9944,7 @@ void querySpoolmanById(int spool_id) {
 
   // last_dried
   sm_last_dried[0] = '\0';
-  if (spool.containsKey("extra") && spool["extra"].containsKey("last_dried")) {
+  if (spool["extra"].is<JsonObject>() && spool["extra"]["last_dried"].is<JsonVariant>()) {
     String dried = spool["extra"]["last_dried"].as<String>();
     dried.replace("\"", "");
     String iso = dried.substring(0, 10);
@@ -9959,7 +9959,7 @@ void querySpoolmanById(int spool_id) {
   String sm_material = spool["filament"]["material"] | String("");
   sm_material.trim();
   String sm_vendor_name = "";
-  if (spool["filament"].containsKey("vendor") && !spool["filament"]["vendor"].isNull()) {
+  if (spool["filament"]["vendor"].is<const char*>()) {
     sm_vendor_name = spool["filament"]["vendor"]["name"] | String("");
     sm_vendor_name.trim();
   }
@@ -10021,7 +10021,7 @@ void querySpoolmanById(int spool_id) {
   lv_label_set_text(lbl_filament_name, strlen(sm_filament_name) > 0 ? sm_filament_name : "-");
 
   // last_used
-  if (spool.containsKey("last_used") && !spool["last_used"].isNull()) {
+  if (!spool["last_used"].isNull()) {
     String lu = spool["last_used"].as<String>();
     char de_lu[12];
     isoToDe(lu.substring(0, 10).c_str(), de_lu, sizeof(de_lu));
@@ -10095,9 +10095,9 @@ void querySpoolman(const char* tray_uuid) {
 
   // Filter: only parse needed fields — reduces RAM, works with 100+ spools
   // Filter must be Array-wrapped to match the API array response structure
-  StaticJsonDocument<512> filter;
+  JsonDocument filter;
   JsonArray filter_arr = filter.to<JsonArray>();
-  JsonObject filter_spool = filter_arr.createNestedObject();
+  JsonObject filter_spool = filter_arr.add<JsonObject>();
   filter_spool["id"] = true;
   filter_spool["archived"] = true;
   filter_spool["remaining_weight"] = true;
@@ -10132,9 +10132,9 @@ void querySpoolman(const char* tray_uuid) {
 
   JsonArray spools = doc.as<JsonArray>();
   for (JsonObject spool : spools) {
-    if (!spool.containsKey("extra")) continue;
+    if (!spool["extra"].is<JsonObject>()) continue;
     JsonObject extra = spool["extra"];
-    if (!extra.containsKey("tag")) continue;
+    if (!spool["tag"].is<JsonString>()) continue;
 
     String tag_val = extra["tag"].as<String>();
     tag_val.replace("\"", "");
@@ -10160,7 +10160,7 @@ void querySpoolman(const char* tray_uuid) {
     strncpy(sm_filament_name, fil_name.c_str(), sizeof(sm_filament_name)-1);
 
     // last_dried
-    if (extra.containsKey("last_dried")) {
+    if (extra["last_dried"].is<JsonVariant>()) {
       String dried = extra["last_dried"].as<String>();
       dried.replace("\"", "");
       String iso = dried.substring(0, 10);
@@ -10179,7 +10179,7 @@ void querySpoolman(const char* tray_uuid) {
     String sm_material = spool["filament"]["material"] | String("");
     sm_material.trim();
     String sm_vendor_name = "";
-    if (spool["filament"].containsKey("vendor") && !spool["filament"]["vendor"].isNull()) {
+    if (spool["filament"]["vendor"].is<const char*>()) {
       sm_vendor_name = spool["filament"]["vendor"]["name"] | String("");
       sm_vendor_name.trim();
     }
@@ -10252,7 +10252,7 @@ void querySpoolman(const char* tray_uuid) {
     lv_label_set_text(lbl_filament_name, strlen(sm_filament_name) > 0 ? sm_filament_name : "-");
 
     // last_used is directly in the spool object (not in extra!)
-    if (spool.containsKey("last_used") && !spool["last_used"].isNull()) {
+    if (!spool["last_used"].isNull()) {
       String lu = spool["last_used"].as<String>();
       char de_lu[12]; isoToDe(lu.substring(0, 10).c_str(), de_lu, sizeof(de_lu));
       strncpy(sm_last_used, de_lu, sizeof(sm_last_used)-1);
@@ -10277,10 +10277,10 @@ void querySpoolman(const char* tray_uuid) {
   http2.setTimeout(8000);
   int code2 = http2.GET();
   if (code2 == 200) {
-    DynamicJsonDocument doc2(16384);
-    StaticJsonDocument<256> filter2;
+    JsonDocument doc2;
+    JsonDocument filter2;
     JsonArray filter2_arr = filter2.to<JsonArray>();
-    JsonObject f2 = filter2_arr.createNestedObject();
+    JsonObject f2 = filter2_arr.add<JsonObject>();
     f2["id"] = true;
     f2["archived"] = true;
     f2["extra"]["tag"] = true;
@@ -10291,9 +10291,9 @@ void querySpoolman(const char* tray_uuid) {
         // Only check truly archived spools (explicit bool cast needed for JsonVariant)
         bool is_archived = spool["archived"].as<bool>();
         if (!is_archived) continue;
-        if (!spool.containsKey("extra")) continue;
+        if (!spool["extra"].is<JsonObject>()) continue;
         JsonObject extra = spool["extra"];
-        if (!extra.containsKey("tag")) continue;
+        if (!spool["tag"].is<JsonString>()) continue;
         String tag_val = extra["tag"].as<String>();
         tag_val.replace("\"", ""); tag_val.trim();
         if (!tag_val.equalsIgnoreCase(tray_uuid)) continue;
@@ -10761,7 +10761,7 @@ void loop() {
     } else {
       String payload2 = hc2.getString();
       hc2.end();
-      DynamicJsonDocument cdoc(1024);
+      JsonDocument cdoc;
       if (deserializeJson(cdoc, payload2) == DeserializationError::Ok) {
         int cfid   = cdoc["filament"]["id"] | 0;
         float cini = cdoc["filament"]["weight"] | 1000.0f;
