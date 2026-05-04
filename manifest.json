@@ -1,6 +1,6 @@
 {
   "name": "SpoolmanScale",
-  "version": "0.5.6-beta",
+  "version": "v0.5.7-beta",
   "home_assistant_domain": null,
   "funding_url": "https://ko-fi.com/formfollowsfunction",
   "new_install_prompt_erase": true,
@@ -9,15 +9,15 @@
       "chipFamily": "ESP32-S3",
       "parts": [
         {
-          "path": "firmware/SpoolmanScale.ino.bootloader.bin",
+          "path": "firmware/bootloader.bin",
           "offset": 0
         },
         {
-          "path": "firmware/SpoolmanScale.ino.partitions.bin",
+          "path": "firmware/partitions.bin",
           "offset": 32768
         },
         {
-          "path": "firmware/SpoolmanScale.ino.bin",
+          "path": "firmware/SpoolmanScale.bin",
           "offset": 65536
         }
       ]
