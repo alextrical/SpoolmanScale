@@ -485,4 +485,22 @@ const char* const STRINGS[STR_COUNT][2] = {
     LV_SYMBOL_PLAY " Enable auto"                                          },  // STR_AUTO_WEIGHT_ENABLE
   { LV_SYMBOL_STOP " Auto deaktivieren",
     LV_SYMBOL_STOP " Disable auto"                                         },  // STR_AUTO_WEIGHT_DISABLE
+  { "Lagerort",
+    "Location"                                                             },  // STR_BTN_LOCATION
+  { "Lagerort wählen",
+    "Select location"                                                      },  // STR_LOCATION_TITLE
+  { LV_SYMBOL_CLOSE " Kein Lagerort",
+    LV_SYMBOL_CLOSE " No location"                                         },  // STR_LOCATION_NONE
+  { "Lade...",
+    "Loading..."                                                           },  // STR_LOCATION_LOADING
+  { "Kein WLAN",
+    "No WiFi"                                                              },  // STR_LOCATION_NO_WIFI
+  { LV_SYMBOL_OK " Gespeichert",
+    LV_SYMBOL_OK " Saved"                                                  },  // STR_LOCATION_SAVED
+  { LV_SYMBOL_WARNING " Fehler",
+    LV_SYMBOL_WARNING " Error"                                             },  // STR_LOCATION_FAIL
+  { "Keine Spoolman-Lagerorte gefunden",
+    "No Spoolman locations found"                                          },  // STR_LOCATION_NO_LOCATIONS
+  { "Leere Lagerorte werden nicht angezeigt",
+    "Empty locations are not shown"                                        },  // STR_LOCATION_HINT_EMPTY
 };

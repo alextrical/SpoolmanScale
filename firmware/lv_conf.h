@@ -361,21 +361,21 @@
 
 /*Montserrat fonts with ASCII range and some symbols using bpp = 4
  *https://fonts.google.com/specimen/Montserrat*/
-#define LV_FONT_MONTSERRAT_8  1
-#define LV_FONT_MONTSERRAT_10 1
-#define LV_FONT_MONTSERRAT_12 1
-#define LV_FONT_MONTSERRAT_14 1
-#define LV_FONT_MONTSERRAT_16 1
-#define LV_FONT_MONTSERRAT_18 1
-#define LV_FONT_MONTSERRAT_20 1
-#define LV_FONT_MONTSERRAT_22 1
-#define LV_FONT_MONTSERRAT_24 1
-#define LV_FONT_MONTSERRAT_26 1
-#define LV_FONT_MONTSERRAT_28 1
-#define LV_FONT_MONTSERRAT_30 1
-#define LV_FONT_MONTSERRAT_32 1
-#define LV_FONT_MONTSERRAT_34 1
-#define LV_FONT_MONTSERRAT_36 1
+#define LV_FONT_MONTSERRAT_8  0
+#define LV_FONT_MONTSERRAT_10 0
+#define LV_FONT_MONTSERRAT_12 0
+#define LV_FONT_MONTSERRAT_14 0
+#define LV_FONT_MONTSERRAT_16 0
+#define LV_FONT_MONTSERRAT_18 0
+#define LV_FONT_MONTSERRAT_20 0
+#define LV_FONT_MONTSERRAT_22 0
+#define LV_FONT_MONTSERRAT_24 0
+#define LV_FONT_MONTSERRAT_26 0
+#define LV_FONT_MONTSERRAT_28 0
+#define LV_FONT_MONTSERRAT_30 0
+#define LV_FONT_MONTSERRAT_32 0
+#define LV_FONT_MONTSERRAT_34 0
+#define LV_FONT_MONTSERRAT_36 0
 #define LV_FONT_MONTSERRAT_38 0
 #define LV_FONT_MONTSERRAT_40 0
 #define LV_FONT_MONTSERRAT_42 0
@@ -384,6 +384,7 @@
 #define LV_FONT_MONTSERRAT_48 0
 
 /*Demonstrate special features*/
+
 #define LV_FONT_MONTSERRAT_12_SUBPX      0
 #define LV_FONT_MONTSERRAT_28_COMPRESSED 0  /*bpp = 3*/
 #define LV_FONT_DEJAVU_16_PERSIAN_HEBREW 0  /*Hebrew, Arabic, Persian letters and all their forms*/
@@ -396,10 +397,25 @@
 /*Optionally declare custom fonts here.
  *You can use these fonts as default font too and they will be available globally.
  *E.g. #define LV_FONT_CUSTOM_DECLARE   LV_FONT_DECLARE(my_font_1) LV_FONT_DECLARE(my_font_2)*/
-#define LV_FONT_CUSTOM_DECLARE
+#define LV_FONT_CUSTOM_DECLARE \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_8)   \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_10)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_12)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_14)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_16)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_18)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_20)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_22)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_24)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_26)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_28)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_30)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_32)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_34)  \
+    LV_FONT_DECLARE(lv_font_montserrat_ext_36)
 
 /*Always set a default font*/
-#define LV_FONT_DEFAULT &lv_font_montserrat_14
+#define LV_FONT_DEFAULT &lv_font_montserrat_ext_14
 
 /*Enable handling large font and/or fonts with a lot of characters.
  *The limit depends on the font size, font face and bpp.

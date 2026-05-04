@@ -29,7 +29,7 @@ def copy_release_files(source, target, env):
     ota_github_dir  = os.path.join(release_base, "ota_github")
     ota_browser_dir = os.path.join(release_base, "ota_browser")
     source_dir      = os.path.join(release_base, "source")
-    fonts_dir       = os.path.join(source_dir, "lvgl_fonts")
+    fonts_dir       = os.path.join(source_dir, "fonts")
 
     for d in [webflasher_dir, ota_github_dir, ota_browser_dir, source_dir, fonts_dir]:
         os.makedirs(d, exist_ok=True)
@@ -69,21 +69,21 @@ def copy_release_files(source, target, env):
             print(f"copy_release: -> source/{f}")
 
     # Build-Scripts + Config
-    for f in ["platformio.ini", "copy_fonts.py", "copy_release.py", "partitions.csv"]:
+    for f in ["platformio.ini", "copy_release.py", "partitions.csv"]:
         src = os.path.join(project_dir, f)
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(source_dir, f))
             print(f"copy_release: -> source/{f}")
 
     # Custom Fonts
-    lvgl_fonts_src = os.path.join(project_dir, "lib", "lvgl_fonts")
+    lvgl_fonts_src = os.path.join(src_dir, "fonts")
     if os.path.exists(lvgl_fonts_src):
         copied = 0
         for f in os.listdir(lvgl_fonts_src):
             if f.endswith(".c") or f.endswith(".h"):
                 shutil.copy2(os.path.join(lvgl_fonts_src, f), os.path.join(fonts_dir, f))
                 copied += 1
-        print(f"copy_release: -> source/lvgl_fonts/ ({copied} files)")
+        print(f"copy_release: -> source/fonts/ ({copied} files)")
 
     # manifest.json updaten + in Release-Ordner kopieren
     manifest_path = os.path.join(project_dir, "manifest.json")
