@@ -14,12 +14,12 @@ const char* const STRINGS[STR_COUNT][2] = {
 
   // Navigation
   { "Abbrechen",              "Cancel"           },  // STR_CANCEL
-  { "Zurueck",                "Back"             },  // STR_BACK
+  { "Zurück",                "Back"             },  // STR_BACK
   { "Speichern",              "Save"             },  // STR_SAVE
-  { "Bestaetigen",            "Confirm"          },  // STR_CONFIRM
+  { "Bestätigen",            "Confirm"          },  // STR_CONFIRM
   { "Schliessen",             "Close"            },  // STR_CLOSE
   { "Erneut versuchen",       "Try again"        },  // STR_RETRY
-  { "Trotzdem verknuepfen",   "Link anyway"      },  // STR_FORCE_LINK
+  { "Trotzdem verknüpfen",   "Link anyway"      },  // STR_FORCE_LINK
   { "ID neu eingeben",        "Enter new ID"     },  // STR_ENTER_NEW_ID
 
   // Mainscreen Labels
@@ -55,7 +55,7 @@ const char* const STRINGS[STR_COUNT][2] = {
   // Mainscreen Buttons
   { "Gewicht updaten",        "Update Weight"     },  // STR_BTN_WEIGHT
   { "Heute getrocknet",       "Dried today"       },  // STR_BTN_DRIED
-  { "Spule verknuepfen",      "Link Spool"        },  // STR_BTN_LINK
+  { "Spule verknüpfen",      "Link Spool"        },  // STR_BTN_LINK
 
   // Welcome Screen
   { "Willkommen! Bitte WiFi einrichten.",
@@ -67,11 +67,11 @@ const char* const STRINGS[STR_COUNT][2] = {
   // WiFi Setup
   { "WiFi einrichten",        "WiFi Setup"        },  // STR_WIFI_TITLE
   { "Netzwerke suchen...",    "Scanning networks..." },  // STR_WIFI_SCAN
-  { "Netzwerk auswaehlen:",   "Select network:"   },  // STR_WIFI_SELECT
+  { "Netzwerk auswählen:",   "Select network:"   },  // STR_WIFI_SELECT
   { "Erneut suchen",          "Scan again"        },  // STR_WIFI_RESCAN
   { "Keine Netzwerke gefunden", "No networks found" },  // STR_WIFI_NO_NET
   { "WiFi Passwort",          "WiFi Password"     },  // STR_WIFI_PASS_TITLE
-  { "Passwort fuer: %s",      "Password for: %s"  },  // STR_WIFI_PASS_HINT
+  { "Passwort für: %s",      "Password for: %s"  },  // STR_WIFI_PASS_HINT
   { "Verbinde mit %s...",     "Connecting to %s..." },  // STR_WIFI_CONNECTING
   { "Verbunden!",             "Connected!"        },  // STR_WIFI_SUCCESS
   { "Verbindung fehlgeschlagen", "Connection failed" },  // STR_WIFI_FAIL
@@ -123,7 +123,7 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Vakuumbeutel inkl. Silikagelpack (in Gramm)",
     "Vacuum bag incl. silica gel pack (in grams)" },  // STR_BAG_DESC
   { "%.1fg gespeichert",      "%.1fg saved"       },  // STR_BAG_SAVED
-  { "Ungueltiger Wert",       "Invalid value"     },  // STR_BAG_INVALID
+  { "Ungültiger Wert",       "Invalid value"     },  // STR_BAG_INVALID
 
   // Display
   { "Display",                "Display"           },  // STR_DISPLAY_TITLE
@@ -142,12 +142,12 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Deutsch / English",      "Deutsch / English"  },  // STR_BTN_LANG_SUB
   { "Firmware Update",        "Firmware Update"    },  // STR_BTN_FW_UPDATE
   { "Browser oder GitHub",    "Browser or GitHub"  },  // STR_BTN_FW_SUB
-  { "Info & Unterstutzung",   "Info & Support"     },  // STR_BTN_INFO
+  { "Info & Unterstützung",   "Info & Support"     },  // STR_BTN_INFO
   { "Ko-fi - GitHub - Discord - MakerWorld", "Ko-fi - GitHub - Discord - MakerWorld" },  // STR_BTN_INFO_SUB
 
   // Language screen
   { "Sprache / Language",     "Sprache / Language" },  // STR_LANG_TITLE
-  { "Geraet startet nach Auswahl neu.",
+  { "Gerät startet nach Auswahl neu.",
     "Device will reboot after selection." },  // STR_LANG_HINT
   { "coming soon",            "coming soon"        },  // STR_LANG_EN_SUB
   { "Datum / Date format:",   "Datum / Date format:" },  // STR_DATE_FMT_LABEL
@@ -161,9 +161,9 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Browser Update",         "Browser Update"     },  // STR_OTA_BROWSER_TITLE
   { LV_SYMBOL_WARNING "  Kein WiFi\nBitte zuerst WiFi einrichten.",
     LV_SYMBOL_WARNING "  No WiFi\nPlease set up WiFi first." },  // STR_OTA_NO_WIFI
-  { "Browser oeffnen und aufrufen:",
+  { "Browser öffnen und aufrufen:",
     "Open browser and go to:"                   },  // STR_OTA_OPEN_BROWSER
-  { "Datei auswaehlen: SpoolmanScale vX.Y.Z.bin",
+  { "Datei auswählen: SpoolmanScale vX.Y.Z.bin",
     "Select file: SpoolmanScale vX.Y.Z.bin" },  // STR_OTA_FILE_HINT
   { LV_SYMBOL_WIFI "  Warte auf Upload...",
     LV_SYMBOL_WIFI "  Waiting for upload..."    },  // STR_OTA_WAITING
@@ -178,13 +178,13 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Aktuell: %s",            "Current: %s"        },  // STR_OTA_CURRENT
 
   // Info Screen
-  { "Info & Unterstutzung",   "Info & Support"     },  // STR_INFO_TITLE
+  { "Info & Unterstützung",   "Info & Support"     },  // STR_INFO_TITLE
   { "SpoolmanScale  %s",      "SpoolmanScale  %s"  },  // STR_INFO_VERSION
   { "Tippe einen Button um den QR-Code anzuzeigen.",
     "Tap a button to show the QR code."         },  // STR_INFO_HINT
 
   // QR Popups
-  { "Projekt gefaellt dir? Kauf mir einen Kaffee!",
+  { "Projekt gefällt dir? Kauf mir einen Kaffee!",
     "Support this project!"                     },  // STR_QR_KOFI_DESC
   { "Quellcode, Releases & Dokumentation",
     "Source code, releases & docs"              },  // STR_QR_GITHUB_DESC
@@ -199,9 +199,9 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Ohne Beutel\n%.0fg",            "No bag\n%.0fg"          },  // STR_BTN_NO_BAG
   { "Mit Beutel\n%.0fg - %.0fg",     "With bag\n%.0fg - %.0fg" },  // STR_BTN_WITH_BAG
   { "Neue Spule\n%.0fg netto",        "New spool\n%.0fg net"   },  // STR_BTN_NEW_SPOOL
-  { "Leere Spule\n(Kern messen)",     "Empty spool\n(measure core)" },  // STR_BTN_EMPTY_SPOOL
+  { "Leere Spule\n(Spule + Kern messen)",     "Empty spool\n(measure spool + core)" },  // STR_BTN_EMPTY_SPOOL
   { "Spule archivieren\n(leer, 0g)", "Archive spool\n(empty, 0g)" },  // STR_BTN_ARCHIVE
-  { "Ja, bestaetigen",               "Yes, confirm"           },  // STR_BTN_CONFIRMED
+  { "Ja, bestätigen",               "Yes, confirm"           },  // STR_BTN_CONFIRMED
 
   // Spool weight sub-popup
   { "Spulengewicht: %.0f g speichern als...",
@@ -211,40 +211,40 @@ const char* const STRINGS[STR_COUNT][2] = {
   { "Hersteller\n(empty_spool_weight)", "Vendor\n(empty_spool_weight)" },  // STR_BTN_THIS_VENDOR
 
   // Link Flow
-  { "Bambu-Spule verknuepfen",  "Link Bambu spool"   },  // STR_LINK_BAMBU_TITLE
+  { "Bambu-Spule verknüpfen",  "Link Bambu spool"   },  // STR_LINK_BAMBU_TITLE
   { "Unbekannte Spule",         "Unknown spool"       },  // STR_LINK_NTAG_TITLE
   { "%s | nicht in Spoolman",   "%s | not in Spoolman" },  // STR_LINK_NOT_IN_SM
   { "Spool-ID eingeben",        "Enter Spool-ID"      },  // STR_BTN_ENTER_ID
-  { "Aus Liste waehlen",        "Choose from list"    },  // STR_BTN_FROM_LIST
+  { "Aus Liste wählen",        "Choose from list"    },  // STR_BTN_FROM_LIST
   { "Spoolman Spool-ID",        "Spoolman Spool-ID"   },  // STR_LINK_ID_TITLE
-  { "Pruefe...",                "Checking..."         },  // STR_LINK_CHECKING
+  { "Prüfe...",                "Checking..."         },  // STR_LINK_CHECKING
   { "ID nicht gefunden",        "ID not found"        },  // STR_LINK_ID_NOT_FOUND
   { "HTTP Fehler %d",           "HTTP Error %d"       },  // STR_LINK_HTTP_ERR
   { "JSON Fehler",              "JSON error"          },  // STR_LINK_JSON_ERR
   { "Kein WiFi",                "No WiFi"             },  // STR_LINK_NO_WIFI
-  { LV_SYMBOL_WARNING "  Spule bereits verknuepft",
+  { LV_SYMBOL_WARNING "  Spule bereits verknüpft",
     LV_SYMBOL_WARNING "  Tag already assigned!"  },  // STR_WARN_A_TITLE
   { "Spule #%d hat bereits\nein Tag: %s",
     "Spool #%d already has\na tag: %s"          },  // STR_WARN_A_INFO
-  { LV_SYMBOL_WARNING "  Trotzdem verknuepfen",
+  { LV_SYMBOL_WARNING "  Trotzdem verknüpfen",
     LV_SYMBOL_WARNING "  Link anyway"           },  // STR_BTN_OVERWRITE
-  { "Material stimmt nicht ueberein", "Material mismatch" },  // STR_WARN_B_TITLE
-  { "Tag:      %s\nSpoolman: %s  (#%d)\n\nFalsche ID? Bitte nochmal pruefen.",
+  { "Material stimmt nicht überein", "Material mismatch" },  // STR_WARN_B_TITLE
+  { "Tag:      %s\nSpoolman: %s  (#%d)\n\nFalsche ID? Bitte nochmal prüfen.",
     "Tag:      %s\nSpoolman: %s  (#%d)\n\nWrong ID? Please double-check." },  // STR_WARN_B_DETAILS
-  { "Hersteller waehlen  (%d Spulen)", "Choose vendor  (%d spools)" },  // STR_VENDOR_TITLE
+  { "Hersteller wählen  (%d Spulen)", "Choose vendor  (%d spools)" },  // STR_VENDOR_TITLE
   { "Material waehlen",         "Choose material"     },  // STR_MAT_TITLE
-  { "Spule auswaehlen  (%d)",   "Select spool  (%d)"  },  // STR_SPOOLS_TITLE
+  { "Spule auswählen  (%d)",   "Select spool  (%d)"  },  // STR_SPOOLS_TITLE
   { "Keine Spulen ohne Tag\nin Spoolman gefunden.",
     "No unlinked spools\nfound in Spoolman."    },  // STR_NO_VENDORS
   { "Keine Materialien gefunden.", "No materials found." },  // STR_NO_MATERIALS
   { "Keine passenden Spulen.",  "No matching spools." },  // STR_NO_SPOOLS
-  { "Verknuepfen?",             "Link this spool?"    },  // STR_CONFIRM_LINK
-  { LV_SYMBOL_OK "  Verknuepfen", LV_SYMBOL_OK "  Link"      },  // STR_LINK_OK
-  { "Fehler beim Verknuepfen",  "Error linking"       },  // STR_LINK_FAIL
+  { "Verknüpfen?",             "Link this spool?"    },  // STR_CONFIRM_LINK
+  { LV_SYMBOL_OK "  Verknüpfen", LV_SYMBOL_OK "  Link"      },  // STR_LINK_OK
+  { "Fehler beim Verknüpfen",  "Error linking"       },  // STR_LINK_FAIL
 
   // Tare
   { "Tare / Nullpunkt",        "Tare / Zero point"   },  // STR_TARE_TITLE
-  { "Waage leeren und\nTare-Button druecken.",
+  { "Waage leeren und\nTare-Button drücken.",
     "Empty the scale and\npress the TARE button." },  // STR_TARE_DESC
   { LV_SYMBOL_OK "  Tare gesetzt!", LV_SYMBOL_OK "  Tare set!" },  // STR_TARE_OK
   { LV_SYMBOL_WARNING "  Waage nicht bereit",
@@ -290,8 +290,8 @@ const char* const STRINGS[STR_COUNT][2] = {
     LV_SYMBOL_CLOSE " empty / Archive\nremaining=0" },  // STR_BTN_ARCHIVE_EMPTY
 
   // Welcome language select screen
-  { "Sprache waehlen",          "Choose language"    },  // STR_WELCOME_LANG_TITLE
-  { "Sprache kann spaeter\nim Settings geaendert werden.",
+  { "Sprache wählen",          "Choose language"    },  // STR_WELCOME_LANG_TITLE
+  { "Sprache kann später\nim Settings geändert werden.",
     "Language can be changed\nlater in Settings."   },  // STR_WELCOME_LANG_HINT
 
   // WiFi scan count
@@ -332,9 +332,9 @@ const char* const STRINGS[STR_COUNT][2] = {
   // Extra fields screen
   { "Spoolman Extra-Felder",
     "Spoolman Extra Fields"                       },  // STR_EXTRA_FIELDS_TITLE
-  { LV_SYMBOL_REFRESH "  Felder pruefen",
+  { LV_SYMBOL_REFRESH "  Felder prüfen",
     LV_SYMBOL_REFRESH "  Check fields"            },  // STR_EXTRA_FIELDS_CHECK_BTN
-  { "Pruefen...",
+  { "Prüfen...",
     "Checking..."                                 },  // STR_EXTRA_FIELDS_CHECKING
   { LV_SYMBOL_OK "  Alle Felder vorhanden - alles OK!",
     LV_SYMBOL_OK "  All fields present - all OK!" },  // STR_EXTRA_FIELDS_ALL_OK
@@ -356,15 +356,15 @@ const char* const STRINGS[STR_COUNT][2] = {
     LV_SYMBOL_WARNING "  No WiFi"                 },  // STR_EXTRA_FIELDS_NO_WIFI
   { LV_SYMBOL_WARNING "  Kein Spoolman konfiguriert",
     LV_SYMBOL_WARNING "  No Spoolman configured"  },  // STR_EXTRA_FIELDS_NO_SPOOLMAN
-  { "Ueberspringen",
+  { "Überspringen",
     "Skip"                                        },  // STR_EXTRA_FIELDS_SKIP
-  { "SpoolmanScale benoetigt die Extra-Felder\n'tag' und 'last_dried' in Spoolman\num alle Funktionen zu nutzen.",
+  { "SpoolmanScale benötigt die Extra-Felder\n'tag' und 'last_dried' in Spoolman\num alle Funktionen zu nutzen.",
     "SpoolmanScale needs the extra fields\n'tag' and 'last_dried' in Spoolman\nto use all features."  },  // STR_EXTRA_FIELDS_HINT
 
   // Calibration reminder screen
   { "Waage kalibrieren",
     "Calibrate scale"                             },  // STR_CAL_REMINDER_TITLE
-  { "Fuer genaue Messungen muss die Waage\nkalibriert werden.\n\nLege ein bekanntes Gewicht auf\nund gehe zu Einstellungen > Waage\n> Kalibrierung.\n\nDies kann auch spaeter gemacht werden.",
+  { "Für genaue Messungen muss die Waage\nkalibriert werden.\n\nLege ein bekanntes Gewicht auf\nund gehe zu Einstellungen > Waage\n> Kalibrierung.\n\nDies kann auch später gemacht werden.",
     "For accurate measurements the scale\nneeds to be calibrated.\n\nPlace a known weight on the scale\nand go to Settings > Scale > Calibration.\n\nYou can also do this later."  },  // STR_CAL_REMINDER_MSG
   { "Verstanden",
     "Got it!"                                     },  // STR_CAL_REMINDER_LATER
@@ -372,13 +372,13 @@ const char* const STRINGS[STR_COUNT][2] = {
     LV_SYMBOL_EDIT "  Calibrate now"              },  // STR_CAL_REMINDER_NOW
 
   // Calibration TARE hint
-  { "Zuerst ohne Gewicht TARE druecken!\nDann Gewicht auflegen und berechnen.",
+  { "Zuerst ohne Gewicht TARE drücken!\nDann Gewicht auflegen und berechnen.",
     "First press TARE without weight!\nThen place weight and calculate."  },  // STR_CAL_TARE_HINT
 
   // Extra fields test button
   { LV_SYMBOL_EDIT "  Testfeld erstellen",
     LV_SYMBOL_EDIT "  Generate test field"                               },  // STR_EF_TEST_BTN
-  { LV_SYMBOL_OK "  'spoolscale_test' erstellt!\nIn Spoolman nach dem Test loeschen.",
+  { LV_SYMBOL_OK "  'spoolscale_test' erstellt!\nIn Spoolman nach dem Test löschen.",
     LV_SYMBOL_OK "  'spoolscale_test' created!\nDelete it in Spoolman after testing." },  // STR_EF_TEST_CREATED
   { LV_SYMBOL_WARNING "  Feld existiert bereits in Spoolman.",
     LV_SYMBOL_WARNING "  Field already exists in Spoolman."              },  // STR_EF_TEST_EXISTS
@@ -386,7 +386,7 @@ const char* const STRINGS[STR_COUNT][2] = {
     LV_SYMBOL_WARNING "  Test field creation failed."                    },  // STR_EF_TEST_FAIL
 
   // Spoolman IP validation
-  { "Verbindung wird geprueft...",
+  { "Verbindung wird geprüft...",
     "Testing connection..."                                               },  // STR_SPOOLMAN_TESTING
   { LV_SYMBOL_OK "  Spoolman erreichbar",
     LV_SYMBOL_OK "  Spoolman reachable"                                  },  // STR_SPOOLMAN_OK
@@ -394,7 +394,7 @@ const char* const STRINGS[STR_COUNT][2] = {
     LV_SYMBOL_WARNING "  Spoolman not reachable"                         },  // STR_SPOOLMAN_FAIL
   { "Erneut versuchen",
     "Retry"                                                               },  // STR_SPOOLMAN_RETRY
-  { "Ueberspringen",
+  { "Überspringen",
     "Skip"                                                                },  // STR_SPOOLMAN_SKIP
 
   // More info filament screen
@@ -404,15 +404,15 @@ const char* const STRINGS[STR_COUNT][2] = {
   // GitHub OTA check screen
   { "GitHub Update",
     "GitHub Update"                                                       },  // STR_GH_OTA_TITLE
-  { "Auf Updates pruefen",
+  { "Auf Updates prüfen",
     "Check for Updates"                                                   },  // STR_GH_OTA_CHECK_BTN
-  { "Pruefen...",
+  { "Prüfen...",
     "Checking..."                                                         },  // STR_GH_OTA_CHECKING
   { "Kein WiFi - bitte zuerst verbinden",
     "No WiFi - please connect first"                                      },  // STR_GH_OTA_NO_WIFI
   { "Bereits aktuell",
     "Already up to date"                                                  },  // STR_GH_OTA_UP_TO_DATE
-  { "Update verfuegbar: %s",
+  { "Update verfügbar: %s",
     "Update available: %s"                                                },  // STR_GH_OTA_UPDATE_AVAIL
   { "Jetzt installieren",
     "Install Now"                                                         },  // STR_GH_OTA_UPDATE_BTN
@@ -444,35 +444,45 @@ const char* const STRINGS[STR_COUNT][2] = {
     "If you don't actively use the 'Last Used' field in Spoolman, SpoolmanScale will use it to store the date of the last weight update. The main screen will then show 'Last Weighed' instead of 'Last Used'."
                                                                           },  // STR_LASTUSED_DESC_WEIGHED
   { "Werkseinstellungen",       "Factory Reset"              },  // STR_BTN_FACTORY_RESET
-  { "Alle Einstellungen loeschen", "Erase all settings"      },  // STR_BTN_FACTORY_RESET_SUB
+  { "Alle Einstellungen löschen", "Erase all settings"      },  // STR_BTN_FACTORY_RESET_SUB
   { "Werkseinstellungen?",      "Factory Reset?"             },  // STR_FACTORY_RESET_TITLE
-  { "Alle Einstellungen werden geloescht:\nWiFi, Spoolman IP, Kalibrierung,\nSprache und alle anderen Daten.\nDanach startet das Geraet neu.",
+  { "Alle Einstellungen werden gelöscht:\nWiFi, Spoolman IP, Kalibrierung,\nSprache und alle anderen Daten.\nDanach startet das Gerät neu.",
     "All settings will be erased:\nWiFi, Spoolman IP, calibration,\nlanguage and all other data.\nThe device will restart afterwards." },  // STR_FACTORY_RESET_MSG
-  { "Ja, alles loeschen",       "Yes, erase everything"      },  // STR_FACTORY_RESET_CONFIRM
+  { "Ja, alles löschen",       "Yes, erase everything"      },  // STR_FACTORY_RESET_CONFIRM
   { "Spule kopieren",            "Copy spool"                 },  // STR_BTN_COPY_SPOOL
   { "Spule kopieren",            "Copy spool"                 },  // STR_COPY_TITLE
   { "Spoolman-ID eingeben",      "Enter Spoolman ID"          },  // STR_COPY_ID_BTN
   { "Aktive Spulen",             "Active spools"              },  // STR_COPY_ACTIVE_BTN
   { "Archivierte Spulen",        "Archived spools"            },  // STR_COPY_ARCHIVED_BTN
   { "Neue Spule anlegen?",       "Create new spool?"          },  // STR_COPY_CONFIRM_TITLE
-  { "Vorlage: %s\nZuletzt bekannt: %.0f g\nWaagengewicht (netto): %.0f g\n-> wird uebernommen", "Template: %s\nLast known: %.0f g\nNew spool weight (net): %.0f g\n-> will be saved" },  // STR_COPY_CONFIRM_MSG
+  { "Vorlage: %s\nZuletzt bekannt: %.0f g\nWaagengewicht (netto): %.0f g\n-> wird übernommen", "Template: %s\nLast known: %.0f g\nNew spool weight (net): %.0f g\n-> will be saved" },  // STR_COPY_CONFIRM_MSG
   { "Spule erstellt!",           "Spool created!"             },  // STR_COPY_OK
   { "Fehler beim Erstellen",     "Error creating spool"       },  // STR_COPY_FAIL
   { "Keine Spulen gefunden",     "No spools found"            },  // STR_COPY_NO_SPOOLS
   { "Zu viele Ergebnisse.\nBitte ID verwenden.", "Too many results.\nPlease use ID instead." },  // STR_COPY_LIMIT_HIT
-  { "Setup ueberspringen",      "Skip setup"                 },  // STR_BTN_SKIP_SETUP
+  { "Setup überspringen",      "Skip setup"                 },  // STR_BTN_SKIP_SETUP
   { "Unlink",                   "Unlink"                     },  // STR_UNLINK_BTN
   { "Spule unlinken?",          "Unlink spool?"              },  // STR_UNLINK_TITLE
-  { "Loescht den Eintrag im Tag-Feld in Spoolman.\nDie Spule bleibt erhalten.",
+  { "Löscht den Eintrag im Tag-Feld in Spoolman.\nDie Spule bleibt erhalten.",
     "Clears the tag field entry in Spoolman.\nThe spool itself is kept." },  // STR_UNLINK_MSG
   { "Ja, unlinken",             "Yes, unlink"                },  // STR_UNLINK_CONFIRM
   { "Waage initialisiert...",   "Scale calibrating..."       },  // STR_SCALE_CALIBRATING
   { "Verbinde mit WiFi...",     "Connecting to WiFi..."      },  // STR_WIFI_CONNECTING_BOOT
   { "Waage und WiFi werden gestartet...", "Starting up, please wait..." },  // STR_BOOTING
   { "Neustart",                 "Reboot"                     },  // STR_BTN_REBOOT
-  { "Geraet neu starten",       "Restart device"             },  // STR_BTN_REBOOT_SUB
+  { "Gerät neu starten",       "Restart device"             },  // STR_BTN_REBOOT_SUB
   { "Ganze g",                  "Whole g"                    },  // STR_WHOLE_GRAM
-  { "Mehr Spulen gefunden - nicht gelistet? Per Spool-ID verknuepfen",   "More spools found - not listed? Use Spool-ID"   },  // STR_LIST_MORE_SPOOLS
-  { "Mehr Hersteller gefunden - nicht gelistet? Per Spool-ID verknuepfen", "More vendors found - not listed? Use Spool-ID" },  // STR_LIST_MORE_VENDORS
-  { "Mehr Materialien gefunden - nicht gelistet? Per Spool-ID verknuepfen", "More materials found - not listed? Use Spool-ID" },  // STR_LIST_MORE_MATS
+  { "Mehr Spulen gefunden - nicht gelistet? Per Spool-ID verknüpfen",   "More spools found - not listed? Use Spool-ID"   },  // STR_LIST_MORE_SPOOLS
+  { "Mehr Hersteller gefunden - nicht gelistet? Per Spool-ID verknüpfen", "More vendors found - not listed? Use Spool-ID" },  // STR_LIST_MORE_VENDORS
+  { "Mehr Materialien gefunden - nicht gelistet? Per Spool-ID verknüpfen", "More materials found - not listed? Use Spool-ID" },  // STR_LIST_MORE_MATS
+
+  // Auto-Weight
+  { "Auto-Gewichtsupdate",
+    "Auto weight update"                                                   },  // STR_AUTO_WEIGHT_TITLE
+  { "Sobald eine Spule erkannt und das Gewicht\n3 Sekunden stabil ist, wird es automatisch\ngespeichert (ohne Beutel).",
+    "Once a spool is detected and the weight\nis stable for 3 seconds, it will be saved\nautomatically (without bag)."  },  // STR_AUTO_WEIGHT_INFO
+  { LV_SYMBOL_PLAY " Auto aktivieren",
+    LV_SYMBOL_PLAY " Enable auto"                                          },  // STR_AUTO_WEIGHT_ENABLE
+  { LV_SYMBOL_STOP " Auto deaktivieren",
+    LV_SYMBOL_STOP " Disable auto"                                         },  // STR_AUTO_WEIGHT_DISABLE
 };
